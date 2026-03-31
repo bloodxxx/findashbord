@@ -1,0 +1,348 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Форматы документов — ФинДашборд{% endblock %}
+{% block page_title %}Форматы документов{% endblock %}
+
+{% block content %}
+
+<!-- Supported file formats -->
+<div class="card mb-4">
+    <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        Поддерживаемые форматы файлов
+    </div>
+    <div class="card-body px-4 py-3">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div style="display:flex;align-items:flex-start;gap:.9rem;padding:1rem;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;">
+                    <div style="width:42px;height:42px;border-radius:10px;background:#d1fae5;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:.2rem;">Excel</div>
+                        <div style="display:flex;gap:.3rem;flex-wrap:wrap;">
+                            <span class="file-chip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>.xlsx</span>
+                            <span class="file-chip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>.xls</span>
+                        </div>
+                        <div style="font-size:.75rem;color:#6b7280;margin-top:.35rem;">Таблицы Microsoft Excel. Данные должны быть на первом листе, первая строка — заголовки колонок.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div style="display:flex;align-items:flex-start;gap:.9rem;padding:1rem;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;">
+                    <div style="width:42px;height:42px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:.2rem;">CSV</div>
+                        <div style="display:flex;gap:.3rem;">
+                            <span class="file-chip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>.csv</span>
+                        </div>
+                        <div style="font-size:.75rem;color:#6b7280;margin-top:.35rem;">Таблица с разделителями (запятая или точка с запятой). Кодировка UTF-8 или CP1251. Первая строка — заголовки.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div style="display:flex;align-items:flex-start;gap:.9rem;padding:1rem;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;">
+                    <div style="width:42px;height:42px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:.2rem;">XML</div>
+                        <div style="display:flex;gap:.3rem;">
+                            <span class="file-chip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>.xml</span>
+                        </div>
+                        <div style="font-size:.75rem;color:#6b7280;margin-top:.35rem;">Табличная XML-выгрузка. Колонки передаются как теги или атрибуты. Структура должна быть плоской.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:1rem;padding:.75rem 1rem;background:#fef3c7;border-radius:8px;display:flex;align-items:flex-start;gap:.6rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.1rem;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span style="font-size:.8rem;color:#92400e;"><strong>Ограничение:</strong> система принимает только табличные финансовые файлы с обязательными колонками. PDF, Word, договоры и произвольные текстовые файлы не поддерживаются.</span>
+        </div>
+    </div>
+</div>
+
+<!-- 4 document types -->
+<div class="row g-4">
+
+    <!-- 1. Доходы / Расходы -->
+    <div class="col-lg-6">
+        <div class="format-card">
+            <div class="format-card-head">
+                <div class="format-card-icon" style="background:#d1fae5;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:.95rem;">Отчёт по доходам и расходам</div>
+                    <div style="font-size:.75rem;color:#6b7280;">Анализ прибыли, структура затрат, динамика</div>
+                </div>
+            </div>
+            <div class="format-card-body">
+                <div style="font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;">Обязательные колонки</div>
+                <div style="margin-bottom:.9rem;">
+                    <span class="col-tag required">дата</span>
+                    <span class="col-tag required">статья</span>
+                    <span class="col-tag required">тип операции</span>
+                    <span class="col-tag required">сумма</span>
+                </div>
+
+                <div style="font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;">Допустимые названия колонок</div>
+                <table style="width:100%;font-size:.78rem;border-collapse:collapse;">
+                    <thead><tr style="border-bottom:1px solid #f3f4f6;">
+                        <th style="padding:.4rem .6rem;color:#6b7280;font-weight:600;text-align:left;">Поле</th>
+                        <th style="padding:.4rem .6rem;color:#6b7280;font-weight:600;text-align:left;">Варианты названий</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Дата</td><td style="padding:.4rem .6rem;color:#6b7280;">дата, date, дата операции</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Статья</td><td style="padding:.4rem .6rem;color:#6b7280;">статья, категория, category, наименование</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Тип операции</td><td style="padding:.4rem .6rem;color:#6b7280;">тип, тип операции, вид, вид операции, type</td></tr>
+                        <tr><td style="padding:.4rem .6rem;font-weight:500;">Сумма</td><td style="padding:.4rem .6rem;color:#6b7280;">сумма, amount, sum, итого</td></tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top:.9rem;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Значения поля «Тип операции»</div>
+                <div>
+                    <span style="background:#d1fae5;color:#065f46;border-radius:5px;padding:.15rem .5rem;font-size:.75rem;font-weight:600;margin-right:.3rem;">доход / income / приход / +</span>
+                    <span style="background:#fee2e2;color:#991b1b;border-radius:5px;padding:.15rem .5rem;font-size:.75rem;font-weight:600;">расход / expense / списание</span>
+                </div>
+
+                <div style="margin-top:1rem;background:#f9fafb;border-radius:8px;padding:.75rem .9rem;">
+                    <div style="font-size:.72rem;font-weight:700;color:#6b7280;margin-bottom:.4rem;text-transform:uppercase;">Пример CSV</div>
+                    <code style="font-size:.72rem;color:#374151;white-space:pre-line;font-family:monospace;">дата,статья,тип операции,сумма
+01.01.2024,Продажа товаров,доход,150000
+05.01.2024,Аренда офиса,расход,45000</code>
+                </div>
+                <div style="margin-top:.75rem;">
+                    <span style="font-size:.75rem;color:#6b7280;">Тестовый файл:</span>
+                    <a href="/document/1/export/" style="display:none;"></a>
+                    <span style="font-size:.75rem;font-weight:600;color:#7c3aed;margin-left:.3rem;">test_income_expense.csv</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Банковская выписка / ДДС -->
+    <div class="col-lg-6">
+        <div class="format-card">
+            <div class="format-card-head">
+                <div class="format-card-icon" style="background:#dbeafe;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:.95rem;">Банковская выписка / ДДС</div>
+                    <div style="font-size:.75rem;color:#6b7280;">Движение денежных средств, cash flow</div>
+                </div>
+            </div>
+            <div class="format-card-body">
+                <div style="font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;">Обязательные колонки</div>
+                <div style="margin-bottom:.9rem;">
+                    <span class="col-tag required">дата платежа</span>
+                    <span class="col-tag required">сумма</span>
+                    <span class="col-tag required">тип операции</span>
+                    <span class="col-tag required">контрагент</span>
+                </div>
+
+                <div style="font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;">Допустимые названия колонок</div>
+                <table style="width:100%;font-size:.78rem;border-collapse:collapse;">
+                    <thead><tr style="border-bottom:1px solid #f3f4f6;">
+                        <th style="padding:.4rem .6rem;color:#6b7280;font-weight:600;text-align:left;">Поле</th>
+                        <th style="padding:.4rem .6rem;color:#6b7280;font-weight:600;text-align:left;">Варианты названий</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Дата</td><td style="padding:.4rem .6rem;color:#6b7280;">дата, дата платежа, дата операции, date</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Тип операции</td><td style="padding:.4rem .6rem;color:#6b7280;">тип, тип операции, вид, type</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Контрагент</td><td style="padding:.4rem .6rem;color:#6b7280;">контрагент, counterparty, получатель, отправитель</td></tr>
+                        <tr><td style="padding:.4rem .6rem;font-weight:500;">Сумма</td><td style="padding:.4rem .6rem;color:#6b7280;">сумма, amount, sum</td></tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top:.9rem;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Значения поля «Тип операции»</div>
+                <div>
+                    <span style="background:#d1fae5;color:#065f46;border-radius:5px;padding:.15rem .5rem;font-size:.75rem;font-weight:600;margin-right:.3rem;">поступление / приход / inflow / зачисление</span>
+                    <span style="background:#fee2e2;color:#991b1b;border-radius:5px;padding:.15rem .5rem;font-size:.75rem;font-weight:600;">списание / outflow / расход</span>
+                </div>
+
+                <div style="margin-top:1rem;background:#f9fafb;border-radius:8px;padding:.75rem .9rem;">
+                    <div style="font-size:.72rem;font-weight:700;color:#6b7280;margin-bottom:.4rem;text-transform:uppercase;">Пример CSV</div>
+                    <code style="font-size:.72rem;color:#374151;white-space:pre-line;font-family:monospace;">дата платежа,тип операции,контрагент,сумма
+02.01.2024,поступление,ООО Альфа,250000
+04.01.2024,списание,Поставщик №1,80000</code>
+                </div>
+                <div style="margin-top:.75rem;">
+                    <span style="font-size:.75rem;color:#6b7280;">Тестовый файл:</span>
+                    <span style="font-size:.75rem;font-weight:600;color:#7c3aed;margin-left:.3rem;">test_cash_flow.csv</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Бюджет подразделения -->
+    <div class="col-lg-6">
+        <div class="format-card">
+            <div class="format-card-head">
+                <div class="format-card-icon" style="background:#fef3c7;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:.95rem;">Бюджет подразделения</div>
+                    <div style="font-size:.75rem;color:#6b7280;">План-факт анализ, контроль исполнения бюджета</div>
+                </div>
+            </div>
+            <div class="format-card-body">
+                <div style="font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;">Обязательные колонки</div>
+                <div style="margin-bottom:.9rem;">
+                    <span class="col-tag required">период</span>
+                    <span class="col-tag required">подразделение</span>
+                    <span class="col-tag required">статья</span>
+                    <span class="col-tag required">план</span>
+                    <span class="col-tag">факт <span style="font-weight:400;font-size:.7rem;">(опц.)</span></span>
+                </div>
+
+                <div style="font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;">Допустимые названия колонок</div>
+                <table style="width:100%;font-size:.78rem;border-collapse:collapse;">
+                    <thead><tr style="border-bottom:1px solid #f3f4f6;">
+                        <th style="padding:.4rem .6rem;color:#6b7280;font-weight:600;text-align:left;">Поле</th>
+                        <th style="padding:.4rem .6rem;color:#6b7280;font-weight:600;text-align:left;">Варианты названий</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Период</td><td style="padding:.4rem .6rem;color:#6b7280;">период, period, месяц, квартал</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Подразделение</td><td style="padding:.4rem .6rem;color:#6b7280;">подразделение, department, отдел, dept</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Статья</td><td style="padding:.4rem .6rem;color:#6b7280;">статья, категория, category, наименование</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">План</td><td style="padding:.4rem .6rem;color:#6b7280;">план, plan, плановое значение, бюджет</td></tr>
+                        <tr><td style="padding:.4rem .6rem;font-weight:500;">Факт</td><td style="padding:.4rem .6rem;color:#6b7280;">факт, fact, фактическое значение, фактически</td></tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top:1rem;background:#f9fafb;border-radius:8px;padding:.75rem .9rem;">
+                    <div style="font-size:.72rem;font-weight:700;color:#6b7280;margin-bottom:.4rem;text-transform:uppercase;">Пример CSV</div>
+                    <code style="font-size:.72rem;color:#374151;white-space:pre-line;font-family:monospace;">период,подразделение,статья,план,факт
+Январь 2024,Отдел продаж,Зарплата,200000,198000
+Январь 2024,IT-отдел,Оборудование,40000,65000</code>
+                </div>
+                <div style="margin-top:.75rem;">
+                    <span style="font-size:.75rem;color:#6b7280;">Тестовый файл:</span>
+                    <span style="font-size:.75rem;font-weight:600;color:#7c3aed;margin-left:.3rem;">test_budget.csv</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. KPI-отчёт -->
+    <div class="col-lg-6">
+        <div class="format-card">
+            <div class="format-card-head">
+                <div class="format-card-icon" style="background:#ede9fe;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:.95rem;">KPI-отчёт подразделения</div>
+                    <div style="font-size:.75rem;color:#6b7280;">Анализ выполнения ключевых показателей</div>
+                </div>
+            </div>
+            <div class="format-card-body">
+                <div style="font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;">Обязательные колонки</div>
+                <div style="margin-bottom:.9rem;">
+                    <span class="col-tag required">период</span>
+                    <span class="col-tag required">подразделение</span>
+                    <span class="col-tag required">показатель</span>
+                    <span class="col-tag required">план</span>
+                    <span class="col-tag required">факт</span>
+                </div>
+
+                <div style="font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;">Допустимые названия колонок</div>
+                <table style="width:100%;font-size:.78rem;border-collapse:collapse;">
+                    <thead><tr style="border-bottom:1px solid #f3f4f6;">
+                        <th style="padding:.4rem .6rem;color:#6b7280;font-weight:600;text-align:left;">Поле</th>
+                        <th style="padding:.4rem .6rem;color:#6b7280;font-weight:600;text-align:left;">Варианты названий</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Период</td><td style="padding:.4rem .6rem;color:#6b7280;">период, period, месяц, квартал</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Подразделение</td><td style="padding:.4rem .6rem;color:#6b7280;">подразделение, department, отдел, dept</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">Показатель</td><td style="padding:.4rem .6rem;color:#6b7280;">показатель, indicator, kpi, метрика, наименование kpi</td></tr>
+                        <tr style="border-bottom:1px solid #f9fafb;"><td style="padding:.4rem .6rem;font-weight:500;">План</td><td style="padding:.4rem .6rem;color:#6b7280;">план, plan, плановое значение</td></tr>
+                        <tr><td style="padding:.4rem .6rem;font-weight:500;">Факт</td><td style="padding:.4rem .6rem;color:#6b7280;">факт, fact, фактическое значение</td></tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top:.9rem;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Статусы выполнения KPI</div>
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#059669;display:inline-block;"></span>
+                        <span style="font-weight:600;color:#065f46;">Выполнен</span>
+                        <span style="color:#6b7280;">≥ 100%</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#d97706;display:inline-block;"></span>
+                        <span style="font-weight:600;color:#92400e;">Частично</span>
+                        <span style="color:#6b7280;">80–99%</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block;"></span>
+                        <span style="font-weight:600;color:#991b1b;">Не выполнен</span>
+                        <span style="color:#6b7280;">&lt; 80%</span>
+                    </div>
+                </div>
+
+                <div style="margin-top:1rem;background:#f9fafb;border-radius:8px;padding:.75rem .9rem;">
+                    <div style="font-size:.72rem;font-weight:700;color:#6b7280;margin-bottom:.4rem;text-transform:uppercase;">Пример CSV</div>
+                    <code style="font-size:.72rem;color:#374151;white-space:pre-line;font-family:monospace;">период,подразделение,показатель,план,факт
+Q1 2024,Отдел продаж,Выручка (млн руб.),15,17.2
+Q1 2024,IT-отдел,Uptime системы (%),99.5,99.8</code>
+                </div>
+                <div style="margin-top:.75rem;">
+                    <span style="font-size:.75rem;color:#6b7280;">Тестовый файл:</span>
+                    <span style="font-size:.75rem;font-weight:600;color:#7c3aed;margin-left:.3rem;">test_kpi.csv</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick start -->
+<div class="card mt-4">
+    <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Быстрый старт
+    </div>
+    <div class="card-body px-4 py-3">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:.75rem;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;margin-bottom:.6rem;">1</div>
+                    <div style="font-weight:600;font-size:.85rem;margin-bottom:.25rem;">Подготовьте файл</div>
+                    <div style="font-size:.75rem;color:#6b7280;">Excel или CSV с обязательными колонками из таблицы выше</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:.75rem;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;margin-bottom:.6rem;">2</div>
+                    <div style="font-weight:600;font-size:.85rem;margin-bottom:.25rem;">Перейдите на загрузку</div>
+                    <div style="font-size:.75rem;color:#6b7280;">Раздел «Загрузка файла» в меню слева</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:.75rem;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;margin-bottom:.6rem;">3</div>
+                    <div style="font-weight:600;font-size:.85rem;margin-bottom:.25rem;">Выберите тип документа</div>
+                    <div style="font-size:.75rem;color:#6b7280;">Один из 4 типов в выпадающем списке</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:.75rem;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#d1fae5;color:#059669;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;margin-bottom:.6rem;">4</div>
+                    <div style="font-weight:600;font-size:.85rem;margin-bottom:.25rem;">Получите дашборд</div>
+                    <div style="font-size:.75rem;color:#6b7280;">Графики, KPI-карточки и таблица данных автоматически</div>
+                </div>
+            </div>
+        </div>
+        <div style="text-align:center;margin-top:.5rem;">
+            <a href="{% url 'dashboard:upload' %}" class="btn btn-primary px-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.35rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Загрузить документ
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

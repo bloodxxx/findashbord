@@ -1,0 +1,148 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Загрузка — ФинДашборд{% endblock %}
+{% block page_title %}Загрузка документа{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    <!-- Upload form -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Новый документ
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+
+                    <div class="drop-zone mb-3" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto .5rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                        <div class="fw-semibold" style="color:#374151;font-size:.9rem;" id="dropText">Перетащите файл сюда или нажмите для выбора</div>
+                        <div class="text-muted mt-1" style="font-size:.78rem;">Excel (.xlsx, .xls) &nbsp;·&nbsp; CSV (.csv) &nbsp;·&nbsp; XML (.xml) &nbsp;·&nbsp; до 20 МБ</div>
+                    </div>
+                    <input type="file" name="file" id="fileInput" accept=".xlsx,.xls,.csv,.xml" class="d-none" required>
+
+                    <div class="mb-3">
+                        <label class="form-label">Тип документа <span class="text-danger">*</span></label>
+                        <select name="doc_type" class="form-select" required>
+                            <option value="">— Выберите тип —</option>
+                            {% for val, label in document_types %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Период <span style="color:#9ca3af;font-weight:400;">(необязательно)</span></label>
+                        <input type="text" name="period" class="form-control" placeholder="Например: Январь 2024, Q1 2024">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2" id="submitBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.35rem;"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                        Загрузить и проанализировать
+                    </button>
+                </form>
+
+                <div id="progressBar" class="mt-3 d-none">
+                    <div class="text-muted mb-1" style="font-size:.8rem;">Идёт обработка…</div>
+                    <div class="progress" style="height:6px;border-radius:999px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%;background:#7c3aed;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipeline info -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Как работает система
+            </div>
+            <div class="card-body py-3 px-4">
+                <div class="d-flex align-items-center gap-2 flex-wrap" style="font-size:.78rem;color:#6b7280;">
+                    <span style="background:#ede9fe;color:#7c3aed;border-radius:6px;padding:.2rem .55rem;font-weight:600;">Загрузка</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Валидация</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Парсинг</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Нормализация</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Анализ</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:.2rem .55rem;font-weight:600;">Дашборд</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent uploads -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Последние загрузки
+            </div>
+            <div class="card-body p-0">
+                {% if recent_docs %}
+                <ul class="list-unstyled mb-0">
+                    {% for doc in recent_docs %}
+                    <li style="padding:.85rem 1.25rem;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:.75rem;">
+                        <div style="min-width:0;">
+                            <div style="font-size:.875rem;font-weight:600;color:#1a1d27;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{ doc.file_name }}</div>
+                            <div style="font-size:.75rem;color:#9ca3af;margin-top:.15rem;">{{ doc.get_doc_type_display }} &nbsp;·&nbsp; {{ doc.uploaded_at|date:"d.m.Y H:i" }}</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
+                            <span class="sbadge sbadge-{{ doc.status }}">{{ doc.get_status_display }}</span>
+                            {% if doc.status == 'done' %}
+                            <a href="{% url 'dashboard:document_detail' doc.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div style="text-align:center;padding:3rem 1rem;color:#9ca3af;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto .75rem;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <div style="font-size:.875rem;">Пока нет загруженных документов</div>
+                </div>
+                {% endif %}
+            </div>
+            {% if recent_docs %}
+            <div class="card-footer" style="background:transparent;border-top:1px solid #f3f4f6;text-align:center;padding:.75rem;">
+                <a href="{% url 'dashboard:history' %}" style="font-size:.82rem;color:#7c3aed;font-weight:600;text-decoration:none;">Смотреть всю историю →</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const dropText = document.getElementById('dropText');
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) {
+        dropText.textContent = fileInput.files[0].name;
+        dropZone.style.borderColor = '#7c3aed';
+        dropZone.style.background = '#ede9fe';
+    }
+});
+['dragover','dragenter'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); }));
+dropZone.addEventListener('drop', ev => {
+    const f = ev.dataTransfer.files;
+    if (f.length) { fileInput.files = f; dropText.textContent = f[0].name; dropZone.style.borderColor = '#7c3aed'; }
+});
+document.getElementById('uploadForm').addEventListener('submit', () => {
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('progressBar').classList.remove('d-none');
+});
+</script>
+{% endblock %}

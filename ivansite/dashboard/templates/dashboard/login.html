@@ -1,0 +1,72 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Вход — ФинДашборд{% endblock %}
+
+{% block auth_content %}
+<div style="min-height:100vh;display:flex;background:#f4f6fb;">
+    <!-- Left panel -->
+    <div style="width:420px;flex-shrink:0;background:#7c3aed;display:flex;flex-direction:column;justify-content:center;padding:3rem 2.5rem;">
+        <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:2.5rem;">
+            <div style="width:42px;height:42px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <span style="color:#fff;font-weight:700;font-size:1.1rem;font-family:Inter,sans-serif;">ФинДашборд</span>
+        </div>
+        <h1 style="color:#fff;font-size:1.8rem;font-weight:700;line-height:1.3;margin-bottom:1rem;">Анализ финансовых данных</h1>
+        <p style="color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.6;">Загружайте Excel и CSV-файлы, получайте автоматический анализ и красивые графики.</p>
+        <div style="margin-top:2rem;display:flex;flex-direction:column;gap:.7rem;">
+            <div style="display:flex;align-items:center;gap:.6rem;color:rgba(255,255,255,.85);font-size:.85rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Поддержка Excel, CSV, XML
+            </div>
+            <div style="display:flex;align-items:center;gap:.6rem;color:rgba(255,255,255,.85);font-size:.85rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                4 типа финансовых отчётов
+            </div>
+            <div style="display:flex;align-items:center;gap:.6rem;color:rgba(255,255,255,.85);font-size:.85rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Автоматические графики и KPI
+            </div>
+        </div>
+    </div>
+
+    <!-- Right panel -->
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:2rem;">
+        <div style="width:100%;max-width:380px;">
+            <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:.4rem;font-family:Inter,sans-serif;">Добро пожаловать</h2>
+            <p style="color:#6b7280;font-size:.875rem;margin-bottom:1.75rem;">Войдите в свой аккаунт</p>
+
+            {% if messages %}
+                {% for msg in messages %}
+                <div style="background:#fef2f2;color:#991b1b;padding:.7rem 1rem;border-radius:8px;font-size:.85rem;margin-bottom:1rem;">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.4rem;">Имя пользователя</label>
+                    <input type="text" name="username" required autofocus
+                        style="width:100%;padding:.6rem .85rem;border:1px solid #e5e7eb;border-radius:8px;font-size:.875rem;font-family:Inter,sans-serif;outline:none;"
+                        onfocus="this.style.borderColor='#7c3aed';this.style.boxShadow='0 0 0 3px rgba(124,58,237,.12)'"
+                        onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.4rem;">Пароль</label>
+                    <input type="password" name="password" required
+                        style="width:100%;padding:.6rem .85rem;border:1px solid #e5e7eb;border-radius:8px;font-size:.875rem;font-family:Inter,sans-serif;outline:none;"
+                        onfocus="this.style.borderColor='#7c3aed';this.style.boxShadow='0 0 0 3px rgba(124,58,237,.12)'"
+                        onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                </div>
+                <button type="submit"
+                    style="width:100%;padding:.7rem;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;transition:background .15s;"
+                    onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                    Войти
+                </button>
+            </form>
+            <p style="text-align:center;margin-top:1.25rem;font-size:.85rem;color:#6b7280;">
+                Нет аккаунта? <a href="{% url 'dashboard:register' %}" style="color:#7c3aed;font-weight:600;text-decoration:none;">Зарегистрироваться</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

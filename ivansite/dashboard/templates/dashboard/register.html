@@ -1,0 +1,57 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Регистрация — ФинДашборд{% endblock %}
+
+{% block auth_content %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f6fb;padding:2rem;">
+    <div style="width:100%;max-width:420px;">
+        <div style="text-align:center;margin-bottom:2rem;">
+            <div style="width:50px;height:50px;background:#7c3aed;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto .9rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <h2 style="font-size:1.4rem;font-weight:700;font-family:Inter,sans-serif;">Создать аккаунт</h2>
+            <p style="color:#6b7280;font-size:.875rem;margin-top:.3rem;">Заполните форму для регистрации</p>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:2rem;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+            {% if messages %}
+                {% for msg in messages %}
+                <div style="background:{% if msg.tags == 'error' %}#fef2f2;color:#991b1b{% else %}#f0fdf4;color:#166534{% endif %};padding:.7rem 1rem;border-radius:8px;font-size:.85rem;margin-bottom:1rem;">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.4rem;">Имя пользователя</label>
+                    <input type="text" name="username" required autofocus
+                        style="width:100%;padding:.6rem .85rem;border:1px solid #e5e7eb;border-radius:8px;font-size:.875rem;font-family:Inter,sans-serif;outline:none;"
+                        onfocus="this.style.borderColor='#7c3aed';this.style.boxShadow='0 0 0 3px rgba(124,58,237,.12)'"
+                        onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.4rem;">Пароль <span style="color:#9ca3af;font-weight:400;">(минимум 6 символов)</span></label>
+                    <input type="password" name="password" required
+                        style="width:100%;padding:.6rem .85rem;border:1px solid #e5e7eb;border-radius:8px;font-size:.875rem;font-family:Inter,sans-serif;outline:none;"
+                        onfocus="this.style.borderColor='#7c3aed';this.style.boxShadow='0 0 0 3px rgba(124,58,237,.12)'"
+                        onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.4rem;">Повторите пароль</label>
+                    <input type="password" name="password2" required
+                        style="width:100%;padding:.6rem .85rem;border:1px solid #e5e7eb;border-radius:8px;font-size:.875rem;font-family:Inter,sans-serif;outline:none;"
+                        onfocus="this.style.borderColor='#7c3aed';this.style.boxShadow='0 0 0 3px rgba(124,58,237,.12)'"
+                        onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                </div>
+                <button type="submit"
+                    style="width:100%;padding:.7rem;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;"
+                    onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                    Зарегистрироваться
+                </button>
+            </form>
+        </div>
+        <p style="text-align:center;margin-top:1.1rem;font-size:.85rem;color:#6b7280;">
+            Уже есть аккаунт? <a href="{% url 'dashboard:login' %}" style="color:#7c3aed;font-weight:600;text-decoration:none;">Войти</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
