@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"print\\('Testing'\\)\")",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(python3 *)",
+      "Bash(echo \"FINDASHBOARD - CODEBASE EXPLORATION SUMMARY\")",
+      "Bash(echo \"=============================================\")",
+      "Bash(echo \"\")",
+      "Bash(echo \"1. PROJECT TYPE: Django 6.0.3 Web Application\")",
+      "Bash(echo \"   Framework: Django \\(Python backend\\)\")",
+      "Bash(dir C:\\\\Users\\\\pupok\\\\Desktop\\\\ivansite /s /b)",
+      "Bash(grep -E \"\\\\.\\(py|html|txt\\)$\")",
+      "Bash(venv/Scripts/pip list *)",
+      "Bash(venv/Scripts/pip install *)",
+      "Bash(venv/Scripts/python -c ' *)",
+      "Bash(../venv/Scripts/python manage.py check)",
+      "Bash(xxd)"
+    ]
+  }
+}

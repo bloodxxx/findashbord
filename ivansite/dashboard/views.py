@@ -1,4 +1,5 @@
 import json
+import io
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -9,13 +10,24 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 import csv
 
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
+
 from .models import Document, FinancialRecord, AnalysisResult, Metric
 from .parsers import parse_document
 from .analyzers import analyze_document
 
 
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv', 'xml'}
-MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+MAX_FILE_SIZE = 20 * 1024 * 1024 
 
 
 def login_view(request):
@@ -235,6 +247,346 @@ def export_csv(request, pk):
             dev = (r.fact_value or 0) - (r.plan_value or 0)
             writer.writerow([r.period, r.department, r.indicator, r.plan_value, r.fact_value, dev])
 
+    return response
+
+
+@login_required
+def export_excel(request, pk):
+    # экспорт записей документа в Excel (.xlsx)
+    document = get_object_or_404(Document, pk=pk, user=request.user)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Отчёт"
+
+    # стили
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill("solid", fgColor="4F46E5")
+    header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left   = Alignment(horizontal="left",   vertical="center", indent=1)
+    center = Alignment(horizontal="center", vertical="center")
+    right  = Alignment(horizontal="right",  vertical="center", indent=1)
+    thin = Side(style="thin", color="D1D5DB")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    def style_header_row(ws, row_num, num_cols):
+        for col in range(1, num_cols + 1):
+            cell = ws.cell(row=row_num, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_align
+            cell.border = border
+
+    def style_data_cell(cell, align=None):
+        cell.border = border
+        cell.alignment = align or center
+
+    # заголовок документа
+    ws.merge_cells(f"A1:{chr(64 + 6)}1")
+    title_cell = ws["A1"]
+    title_cell.value = f"Отчёт: {document.file_name}"
+    title_cell.font = Font(bold=True, size=13)
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 28
+
+    ws.merge_cells(f"A2:{chr(64 + 6)}2")
+    sub_cell = ws["A2"]
+    sub_cell.value = f"{document.get_doc_type_display()} · {document.period or ''} · {document.uploaded_at.strftime('%d.%m.%Y')}"
+    sub_cell.font = Font(italic=True, color="6B7280", size=10)
+    sub_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[2].height = 20
+
+    data_start = 4  # строка с заголовками таблицы
+
+    if document.doc_type == 'income_expense':
+        headers = ['Дата', 'Статья', 'Тип', 'Сумма']
+        ws.append([])
+        for i, h in enumerate(headers, 1):
+            ws.cell(row=data_start, column=i).value = h
+        style_header_row(ws, data_start, len(headers))
+        ws.column_dimensions['A'].width = 14
+        ws.column_dimensions['B'].width = 30
+        ws.column_dimensions['C'].width = 14
+        ws.column_dimensions['D'].width = 16
+        for row_idx, r in enumerate(document.records.all(), data_start + 1):
+            ws.cell(row=row_idx, column=1, value=str(r.date) if r.date else '').alignment = center
+            ws.cell(row=row_idx, column=2, value=r.category or '').alignment = left
+            ws.cell(row=row_idx, column=3, value='Доход' if r.record_type == 'income' else 'Расход').alignment = center
+            amt = ws.cell(row=row_idx, column=4, value=float(r.amount) if r.amount else 0)
+            amt.number_format = '#,##0.00'
+            amt.alignment = right
+            for col in range(1, 5):
+                ws.cell(row=row_idx, column=col).border = border
+
+    elif document.doc_type == 'cash_flow':
+        headers = ['Дата', 'Тип', 'Контрагент', 'Сумма']
+        ws.append([])
+        for i, h in enumerate(headers, 1):
+            ws.cell(row=data_start, column=i).value = h
+        style_header_row(ws, data_start, len(headers))
+        ws.column_dimensions['A'].width = 14
+        ws.column_dimensions['B'].width = 16
+        ws.column_dimensions['C'].width = 30
+        ws.column_dimensions['D'].width = 16
+        for row_idx, r in enumerate(document.records.all(), data_start + 1):
+            ws.cell(row=row_idx, column=1, value=str(r.date) if r.date else '').alignment = center
+            ws.cell(row=row_idx, column=2, value='Поступление' if r.record_type == 'inflow' else 'Списание').alignment = center
+            ws.cell(row=row_idx, column=3, value=r.counterparty or '').alignment = left
+            amt = ws.cell(row=row_idx, column=4, value=float(r.amount) if r.amount else 0)
+            amt.number_format = '#,##0.00'
+            amt.alignment = right
+            for col in range(1, 5):
+                ws.cell(row=row_idx, column=col).border = border
+
+    elif document.doc_type == 'budget':
+        headers = ['Период', 'Подразделение', 'Статья', 'План', 'Факт', 'Отклонение']
+        ws.append([])
+        for i, h in enumerate(headers, 1):
+            ws.cell(row=data_start, column=i).value = h
+        style_header_row(ws, data_start, len(headers))
+        ws.column_dimensions['A'].width = 14
+        ws.column_dimensions['B'].width = 22
+        ws.column_dimensions['C'].width = 28
+        ws.column_dimensions['D'].width = 14
+        ws.column_dimensions['E'].width = 14
+        ws.column_dimensions['F'].width = 14
+        for row_idx, r in enumerate(document.records.all(), data_start + 1):
+            dev = (r.fact_value or 0) - (r.plan_value or 0)
+            ws.cell(row=row_idx, column=1, value=r.period or '').alignment = center
+            ws.cell(row=row_idx, column=2, value=r.department or '').alignment = left
+            ws.cell(row=row_idx, column=3, value=r.category or '').alignment = left
+            for col, val in [(4, r.plan_value), (5, r.fact_value), (6, dev)]:
+                c = ws.cell(row=row_idx, column=col, value=float(val) if val is not None else 0)
+                c.number_format = '#,##0.00'
+                c.alignment = right
+                if col == 6:
+                    c.font = Font(color="059669" if dev >= 0 else "DC2626", bold=True)
+            for col in range(1, 7):
+                ws.cell(row=row_idx, column=col).border = border
+
+    elif document.doc_type == 'kpi':
+        headers = ['Период', 'Подразделение', 'Показатель', 'План', 'Факт', 'Отклонение']
+        ws.append([])
+        for i, h in enumerate(headers, 1):
+            ws.cell(row=data_start, column=i).value = h
+        style_header_row(ws, data_start, len(headers))
+        ws.column_dimensions['A'].width = 14
+        ws.column_dimensions['B'].width = 22
+        ws.column_dimensions['C'].width = 28
+        ws.column_dimensions['D'].width = 14
+        ws.column_dimensions['E'].width = 14
+        ws.column_dimensions['F'].width = 14
+        for row_idx, r in enumerate(document.records.all(), data_start + 1):
+            dev = (r.fact_value or 0) - (r.plan_value or 0)
+            ws.cell(row=row_idx, column=1, value=r.period or '').alignment = center
+            ws.cell(row=row_idx, column=2, value=r.department or '').alignment = left
+            ws.cell(row=row_idx, column=3, value=r.indicator or '').alignment = left
+            for col, val in [(4, r.plan_value), (5, r.fact_value), (6, dev)]:
+                c = ws.cell(row=row_idx, column=col, value=float(val) if val is not None else 0)
+                c.number_format = '#,##0.00'
+                c.alignment = right
+                if col == 6:
+                    c.font = Font(color="059669" if dev >= 0 else "DC2626", bold=True)
+            for col in range(1, 7):
+                ws.cell(row=row_idx, column=col).border = border
+
+    # фиксируем строку заголовков
+    ws.freeze_panes = f"A{data_start + 1}"
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="report_{document.pk}.xlsx"'
+    return response
+
+
+@login_required
+def export_pdf(request, pk):
+    # экспорт записей документа в PDF
+    document = get_object_or_404(Document, pk=pk, user=request.user)
+
+    # регистрируем шрифт с поддержкой кириллицы
+    font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'DejaVuSans.ttf')
+    font_bold_path = os.path.join(os.path.dirname(__file__), 'fonts', 'DejaVuSans-Bold.ttf')
+    pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+    pdfmetrics.registerFont(TTFont('DejaVu-Bold', font_bold_path))
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        leftMargin=1.5 * cm,
+        rightMargin=1.5 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('title', fontName='DejaVu-Bold', fontSize=14, alignment=1, spaceAfter=4)
+    sub_style = ParagraphStyle('sub', fontName='DejaVu', fontSize=9, alignment=1, textColor=colors.HexColor('#6B7280'), spaceAfter=14)
+    cell_style = ParagraphStyle('cell', fontName='DejaVu', fontSize=8)
+
+    elements = []
+
+    elements.append(Paragraph(f"Отчёт: {document.file_name}", title_style))
+    elements.append(Paragraph(
+        f"{document.get_doc_type_display()} · {document.period or ''} · {document.uploaded_at.strftime('%d.%m.%Y')}",
+        sub_style
+    ))
+
+    HEADER_COLOR = colors.HexColor('#4F46E5')
+    ROW_ALT_COLOR = colors.HexColor('#F5F3FF')
+    POS_COLOR = colors.HexColor('#059669')
+    NEG_COLOR = colors.HexColor('#DC2626')
+
+    def make_table(headers, rows_data, text_cols=None, num_cols=None, col_widths=None):
+        """
+        text_cols  — индексы колонок с текстом (0-based), выравнивание LEFT
+        num_cols   — индексы числовых колонок, выравнивание RIGHT
+        col_widths — список долей ширины для каждой колонки (сумма = 1.0),
+                     если None — равные доли
+        """
+        text_cols = set(text_cols or [])
+        num_cols  = set(num_cols  or [])
+
+        page_width = landscape(A4)[0] - 3 * cm
+
+        if col_widths:
+            widths = [page_width * w for w in col_widths]
+        else:
+            widths = [page_width / len(headers)] * len(headers)
+
+        # стили параграфов для ячеек данных
+        p_left   = ParagraphStyle('pl', fontName='DejaVu', fontSize=8,
+                                  alignment=0, leading=10, wordWrap='LTR')
+        p_center = ParagraphStyle('pc', fontName='DejaVu', fontSize=8,
+                                  alignment=1, leading=10, wordWrap='LTR')
+        p_right  = ParagraphStyle('pr', fontName='DejaVu', fontSize=8,
+                                  alignment=2, leading=10, wordWrap='LTR')
+        h_style  = ParagraphStyle('h',  fontName='DejaVu-Bold', fontSize=8,
+                                  textColor=colors.white, alignment=1, leading=10)
+
+        def cell_style(col_idx):
+            if col_idx in text_cols:
+                return p_left
+            if col_idx in num_cols:
+                return p_right
+            return p_center
+
+        # заголовки
+        table_data = [[Paragraph(h, h_style) for h in headers]]
+        # данные — оборачиваем в Paragraph для переноса
+        for row in rows_data:
+            table_data.append([
+                Paragraph(str(cell) if cell is not None else '—', cell_style(ci))
+                for ci, cell in enumerate(row)
+            ])
+
+        t = Table(table_data, colWidths=widths, repeatRows=1)
+        style_cmds = [
+            ('BACKGROUND',    (0, 0), (-1,  0), HEADER_COLOR),
+            ('FONTNAME',      (0, 0), (-1,  0), 'DejaVu-Bold'),
+            ('FONTNAME',      (0, 1), (-1, -1), 'DejaVu'),
+            ('FONTSIZE',      (0, 0), (-1, -1), 8),
+            ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID',          (0, 0), (-1, -1), 0.4, colors.HexColor('#D1D5DB')),
+            ('ROWBACKGROUNDS',(0, 1), (-1, -1), [colors.white, ROW_ALT_COLOR]),
+            ('TOPPADDING',    (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 5),
+        ]
+        t.setStyle(TableStyle(style_cmds))
+        return t
+
+    def fmt(val):
+        if val is None:
+            return '—'
+        try:
+            return f"{float(val):,.2f}"
+        except Exception:
+            return str(val)
+
+    if document.doc_type == 'income_expense':
+        # Дата(0)-center  Статья(1)-left  Тип(2)-center  Сумма(3)-right
+        rows = []
+        for r in document.records.all():
+            rows.append([
+                str(r.date) if r.date else '—',
+                r.category or '—',
+                'Доход' if r.record_type == 'income' else 'Расход',
+                fmt(r.amount),
+            ])
+        elements.append(make_table(
+            ['Дата', 'Статья', 'Тип', 'Сумма'], rows,
+            text_cols=[1], num_cols=[3],
+            col_widths=[0.13, 0.52, 0.13, 0.22]
+        ))
+
+    elif document.doc_type == 'cash_flow':
+        # Дата(0)-center  Тип(1)-center  Контрагент(2)-left  Сумма(3)-right
+        rows = []
+        for r in document.records.all():
+            rows.append([
+                str(r.date) if r.date else '—',
+                'Поступление' if r.record_type == 'inflow' else 'Списание',
+                r.counterparty or '—',
+                fmt(r.amount),
+            ])
+        elements.append(make_table(
+            ['Дата', 'Тип', 'Контрагент', 'Сумма'], rows,
+            text_cols=[2], num_cols=[3],
+            col_widths=[0.13, 0.15, 0.50, 0.22]
+        ))
+
+    elif document.doc_type == 'budget':
+        # Период(0)-center  Подразделение(1)-left  Статья(2)-left  План(3)-right  Факт(4)-right  Откл(5)-right
+        rows = []
+        for r in document.records.all():
+            dev = (r.fact_value or 0) - (r.plan_value or 0)
+            rows.append([
+                r.period or '—',
+                r.department or '—',
+                r.category or '—',
+                fmt(r.plan_value),
+                fmt(r.fact_value),
+                fmt(dev),
+            ])
+        elements.append(make_table(
+            ['Период', 'Подразделение', 'Статья', 'План', 'Факт', 'Отклонение'], rows,
+            text_cols=[1, 2], num_cols=[3, 4, 5],
+            col_widths=[0.10, 0.20, 0.38, 0.11, 0.11, 0.10]
+        ))
+
+    elif document.doc_type == 'kpi':
+        # Период(0)-center  Подразделение(1)-left  Показатель(2)-left  План(3)-right  Факт(4)-right  Откл(5)-right
+        rows = []
+        for r in document.records.all():
+            dev = (r.fact_value or 0) - (r.plan_value or 0)
+            rows.append([
+                r.period or '—',
+                r.department or '—',
+                r.indicator or '—',
+                fmt(r.plan_value),
+                fmt(r.fact_value),
+                fmt(dev),
+            ])
+        elements.append(make_table(
+            ['Период', 'Подразделение', 'Показатель', 'План', 'Факт', 'Отклонение'], rows,
+            text_cols=[1, 2], num_cols=[3, 4, 5],
+            col_widths=[0.10, 0.20, 0.38, 0.11, 0.11, 0.10]
+        ))
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="report_{document.pk}.pdf"'
     return response
 
 

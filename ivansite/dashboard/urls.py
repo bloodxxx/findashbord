@@ -12,5 +12,7 @@ urlpatterns = [
     path('document/<int:pk>/', views.document_detail, name='document_detail'),
     path('document/<int:pk>/delete/', views.delete_document, name='delete_document'),
     path('document/<int:pk>/export/', views.export_csv, name='export_csv'),
+    path('document/<int:pk>/export/excel/', views.export_excel, name='export_excel'),
+    path('document/<int:pk>/export/pdf/', views.export_pdf, name='export_pdf'),
     path('formats/', views.formats_view, name='formats'),
 ]
