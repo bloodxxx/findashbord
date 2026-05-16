@@ -280,13 +280,88 @@
             margin: .15rem .1rem;
         }
         .file-chip svg { width: 13px; height: 13px; }
+
+        /* ── Mobile hamburger button ── */
+        .sidebar-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 36px; height: 36px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+        .sidebar-toggle svg { width: 18px; height: 18px; }
+
+        /* ── Sidebar overlay ── */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.35);
+            z-index: 199;
+        }
+        .sidebar-overlay.active { display: block; }
+
+        /* ── Mobile responsive ── */
+        @media (max-width: 767px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform .25s ease;
+                z-index: 300;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-wrap {
+                margin-left: 0 !important;
+            }
+            .topbar {
+                padding: .7rem 1rem;
+            }
+            .topbar-title {
+                font-size: .9rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 180px;
+            }
+            .sidebar-toggle {
+                display: flex;
+            }
+            .page-body {
+                padding: 1rem;
+            }
+            .kpi-box .kpi-val {
+                font-size: 1.2rem;
+            }
+            .drop-zone {
+                padding: 1.5rem 1rem;
+            }
+            .btn-logout span {
+                display: none;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .topbar-title {
+                max-width: 130px;
+            }
+            .page-body {
+                padding: .75rem;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 {% if user.is_authenticated %}
 
-<aside class="sidebar">
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
         <div class="logo-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -321,11 +396,16 @@
 
 <div class="main-wrap">
     <header class="topbar">
-        <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+        <div style="display:flex;align-items:center;gap:.75rem;">
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Открыть меню">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+        </div>
         <div class="topbar-right">
             <a href="{% url 'dashboard:logout' %}" class="btn-logout">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Выйти
+                <span>Выйти</span>
             </a>
         </div>
     </header>
@@ -349,6 +429,27 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const toggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (!toggle) return;
+    function openSidebar() {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    toggle.addEventListener('click', openSidebar);
+    overlay.addEventListener('click', closeSidebar);
+    sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', closeSidebar));
+})();
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

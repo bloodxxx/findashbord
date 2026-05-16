@@ -4,7 +4,7 @@
 
 {% block content %}
 <!-- Header row -->
-<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+<div class="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-2">
     <div class="d-flex align-items-center gap-2 flex-wrap">
         <span class="sbadge sbadge-{{ document.status }}">{{ document.get_status_display }}</span>
         <span style="font-size:.82rem;color:#9ca3af;">{{ document.get_doc_type_display }}</span>
@@ -12,11 +12,12 @@
         <span style="font-size:.82rem;color:#9ca3af;">{{ document.uploaded_at|date:"d.m.Y H:i" }}</span>
         {% if document.period %}<span style="color:#d1d5db;">·</span><span style="font-size:.82rem;color:#9ca3af;">{{ document.period }}</span>{% endif %}
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-shrink-0">
         <div class="dropdown">
             <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.3rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Скачать отчёт
+                <span class="d-none d-sm-inline">Скачать отчёт</span>
+                <span class="d-sm-none">Скачать</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li>
@@ -59,7 +60,7 @@
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
     {% for metric in metrics %}
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-sm-6 col-md-3">
         <div class="kpi-box">
             <div class="kpi-val">{{ metric.value|floatformat:0 }}</div>
             <div class="kpi-lbl">{{ metric.metric_name }}</div>
@@ -71,16 +72,16 @@
 <!-- Charts -->
 {% if document.doc_type == 'income_expense' %}
 <div class="row g-4 mb-4">
-    <div class="col-lg-7">
+    <div class="col-12 col-lg-7">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Динамика доходов и расходов
             </div>
-            <div class="card-body"><canvas id="lineChart" height="110"></canvas></div>
+            <div class="card-body"><canvas id="lineChart"></canvas></div>
         </div>
     </div>
-    <div class="col-lg-5">
+    <div class="col-12 col-lg-5">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
@@ -93,60 +94,60 @@
 
 {% elif document.doc_type == 'cash_flow' %}
 <div class="row g-4 mb-4">
-    <div class="col-lg-7">
+    <div class="col-12 col-lg-7">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                 Поступления и списания
             </div>
-            <div class="card-body"><canvas id="barChart" height="110"></canvas></div>
+            <div class="card-body"><canvas id="barChart"></canvas></div>
         </div>
     </div>
-    <div class="col-lg-5">
+    <div class="col-12 col-lg-5">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Динамика остатка
             </div>
-            <div class="card-body"><canvas id="balanceChart" height="110"></canvas></div>
+            <div class="card-body"><canvas id="balanceChart"></canvas></div>
         </div>
     </div>
 </div>
 
 {% elif document.doc_type == 'budget' %}
 <div class="row g-4 mb-4">
-    <div class="col-lg-7">
+    <div class="col-12 col-lg-7">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 План vs Факт
             </div>
-            <div class="card-body"><canvas id="planFactChart" height="110"></canvas></div>
+            <div class="card-body"><canvas id="planFactChart"></canvas></div>
         </div>
     </div>
-    <div class="col-lg-5">
+    <div class="col-12 col-lg-5">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Отклонения
             </div>
-            <div class="card-body"><canvas id="deviationChart" height="110"></canvas></div>
+            <div class="card-body"><canvas id="deviationChart"></canvas></div>
         </div>
     </div>
 </div>
 
 {% elif document.doc_type == 'kpi' %}
 <div class="row g-4 mb-4">
-    <div class="col-lg-7">
+    <div class="col-12 col-lg-7">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
                 Выполнение KPI (план vs факт)
             </div>
-            <div class="card-body"><canvas id="kpiBarChart" height="110"></canvas></div>
+            <div class="card-body"><canvas id="kpiBarChart"></canvas></div>
         </div>
     </div>
-    <div class="col-lg-5">
+    <div class="col-12 col-lg-5">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>

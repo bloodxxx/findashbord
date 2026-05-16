@@ -7,7 +7,7 @@
 <div class="card mb-4">
     <div class="card-body py-3 px-4">
         <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
+            <div class="col-12 col-sm-6 col-md-3">
                 <label class="form-label">Тип документа</label>
                 <select name="doc_type" class="form-select form-select-sm">
                     <option value="">Все типы</option>
@@ -16,7 +16,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-sm-3 col-md-2">
                 <label class="form-label">Статус</label>
                 <select name="status" class="form-select form-select-sm">
                     <option value="">Все</option>
@@ -25,11 +25,11 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-sm-3 col-md-3">
                 <label class="form-label">Период</label>
-                <input type="text" name="period" class="form-control form-control-sm" placeholder="Поиск по периоду…" value="{{ current_filters.period }}">
+                <input type="text" name="period" class="form-control form-control-sm" placeholder="Поиск…" value="{{ current_filters.period }}">
             </div>
-            <div class="col-md-4 d-flex gap-2">
+            <div class="col-12 col-md-4 d-flex gap-2 flex-wrap">
                 <button type="submit" class="btn btn-primary btn-sm flex-fill">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.3rem;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                     Применить
@@ -57,9 +57,9 @@
                 <thead>
                     <tr>
                         <th class="ps-4">Файл</th>
-                        <th>Тип</th>
-                        <th>Период</th>
-                        <th>Загружен</th>
+                        <th class="d-none d-sm-table-cell">Тип</th>
+                        <th class="d-none d-md-table-cell">Период</th>
+                        <th class="d-none d-md-table-cell">Загружен</th>
                         <th>Статус</th>
                         <th class="text-end pe-4">Действия</th>
                     </tr>
@@ -68,11 +68,12 @@
                     {% for doc in documents %}
                     <tr>
                         <td class="ps-4">
-                            <div style="font-weight:600;font-size:.85rem;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ doc.file_name }}</div>
+                            <div style="font-weight:600;font-size:.85rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ doc.file_name }}</div>
+                            <div class="d-sm-none" style="font-size:.75rem;color:#9ca3af;margin-top:.1rem;">{{ doc.get_doc_type_display }}</div>
                         </td>
-                        <td style="font-size:.82rem;color:#6b7280;">{{ doc.get_doc_type_display }}</td>
-                        <td style="font-size:.82rem;color:#6b7280;">{{ doc.period|default:"—" }}</td>
-                        <td style="font-size:.82rem;color:#6b7280;">{{ doc.uploaded_at|date:"d.m.Y H:i" }}</td>
+                        <td class="d-none d-sm-table-cell" style="font-size:.82rem;color:#6b7280;">{{ doc.get_doc_type_display }}</td>
+                        <td class="d-none d-md-table-cell" style="font-size:.82rem;color:#6b7280;">{{ doc.period|default:"—" }}</td>
+                        <td class="d-none d-md-table-cell" style="font-size:.82rem;color:#6b7280;">{{ doc.uploaded_at|date:"d.m.Y H:i" }}</td>
                         <td>
                             <span class="sbadge sbadge-{{ doc.status }}">{{ doc.get_status_display }}</span>
                         </td>
@@ -82,7 +83,7 @@
                                 <a href="{% url 'dashboard:document_detail' doc.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Просмотр дашборда">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
-                                <a href="{% url 'dashboard:export_csv' doc.pk %}" class="btn btn-sm btn-outline-success py-0 px-2" title="Экспорт CSV">
+                                <a href="{% url 'dashboard:export_csv' doc.pk %}" class="btn btn-sm btn-outline-success py-0 px-2 d-none d-sm-inline-flex" title="Экспорт CSV">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 </a>
                                 {% endif %}

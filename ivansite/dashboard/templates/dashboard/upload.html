@@ -90,7 +90,7 @@
                     {% for doc in recent_docs %}
                     <li style="padding:.85rem 1.25rem;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:.75rem;">
                         <div style="min-width:0;">
-                            <div style="font-size:.875rem;font-weight:600;color:#1a1d27;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{ doc.file_name }}</div>
+                            <div style="font-size:.875rem;font-weight:600;color:#1a1d27;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(220px, 50vw);">{{ doc.file_name }}</div>
                             <div style="font-size:.75rem;color:#9ca3af;margin-top:.15rem;">{{ doc.get_doc_type_display }} &nbsp;·&nbsp; {{ doc.uploaded_at|date:"d.m.Y H:i" }}</div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
