@@ -320,8 +320,9 @@ function buildCharts() {
 
     if (D.pie && D.pie.labels.length && document.getElementById('pieChart')) charts.pie = new Chart('pieChart', {type:'doughnut',data:{labels:D.pie.labels,datasets:[{data:D.pie.values,backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:11}}},cutout:'60%'}});
 
-    if (D.forecast && document.getElementById('forecastChart') && f.income && f.income.length > 0) {
+    if (D.forecast && document.getElementById('forecastChart')) {
         const f = D.forecast;
+    if (f.income && f.income.length > 0) {
         const labels = f.labels.concat(Array.from({length:f.next.length},(_, i)=>'Прогноз '+(i+1)));
         const hist = f.income.concat(Array(f.next.length).fill(null));
         const fc = Array(f.income.length-1).fill(null).concat([f.income[f.income.length-1]], f.next);
@@ -329,7 +330,7 @@ function buildCharts() {
             {label:'Факт',data:hist,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.08)',fill:true,tension:.3,pointRadius:3},
             {label:'Прогноз',data:fc,borderColor:'#d97706',borderDash:[6,4],tension:.3,pointRadius:3},
         ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
-    }
+    }}
 
 {% elif document.doc_type == 'cash_flow' %}
     const p = lineSeries(gran);
@@ -343,8 +344,9 @@ function buildCharts() {
 
     if (D.balance_line && document.getElementById('balanceChart')) charts.balance = new Chart('balanceChart', {type:'line',data:{labels:D.balance_line.labels,datasets:[{label:'Остаток',data:D.balance_line.values,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.08)',fill:true,tension:.35,pointRadius:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
 
-    if (D.forecast && document.getElementById('forecastChart') && f.net && f.net.length > 0) {
+    if (D.forecast && document.getElementById('forecastChart')) {
         const f = D.forecast;
+    if (f.net && f.net.length > 0) {
         const labels = f.labels.concat(Array.from({length:f.next.length},(_, i)=>'Прогноз '+(i+1)));
         const hist = f.net.concat(Array(f.next.length).fill(null));
         const fc = Array(f.net.length-1).fill(null).concat([f.net[f.net.length-1]], f.next);
@@ -352,7 +354,7 @@ function buildCharts() {
             {label:'Чистый поток',data:hist,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.08)',fill:true,tension:.3,pointRadius:3},
             {label:'Прогноз',data:fc,borderColor:'#d97706',borderDash:[6,4],tension:.3,pointRadius:3},
         ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
-    }
+    }}
 
 {% elif document.doc_type == 'budget' %}
     if (D.plan_fact && document.getElementById('planFactChart')) charts.plan_fact = new Chart('planFactChart', {type:'bar',data:{labels:D.plan_fact.labels,datasets:[
