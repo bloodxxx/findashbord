@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Document, FinancialRecord, AnalysisResult, Metric
+from .models import Document, FinancialRecord, AnalysisResult, Metric, AuditLog, PanelSettings
 
 
 @admin.register(Document)
@@ -23,3 +23,15 @@ class AnalysisResultAdmin(admin.ModelAdmin):
 @admin.register(Metric)
 class MetricAdmin(admin.ModelAdmin):
     list_display = ('document', 'metric_name', 'value')
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ('user', 'action', 'detail', 'created_at')
+    list_filter = ('action',)
+    search_fields = ('user__username', 'detail')
+
+
+@admin.register(PanelSettings)
+class PanelSettingsAdmin(admin.ModelAdmin):
+    list_display = ('user',)

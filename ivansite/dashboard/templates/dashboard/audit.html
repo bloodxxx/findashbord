@@ -1,0 +1,67 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Журнал действий — ФинДашборд{% endblock %}
+{% block page_title %}Журнал действий{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body py-3 px-4">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Тип действия</label>
+                <select name="action" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Все действия</option>
+                    {% for val, label in actions %}
+                    <option value="{{ val }}" {% if current_action == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">Применить</button>
+                <a href="{% url 'dashboard:audit' %}" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+        Действия пользователя
+    </div>
+    <div class="card-body p-0">
+        {% if logs %}
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr><th class="ps-4">Дата и время</th><th>Действие</th><th>Подробности</th></tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="ps-4" style="font-size:.82rem;color:#6b7280;white-space:nowrap;">{{ log.created_at|date:"d.m.Y H:i:s" }}</td>
+                        <td>
+                            <span class="sbadge {% if log.action == 'upload' %}sbadge-uploaded{% elif log.action == 'export' %}sbadge-done{% elif log.action == 'delete' %}sbadge-error{% else %}sbadge-validating{% endif %}">{{ log.get_action_display }}</span>
+                        </td>
+                        <td style="font-size:.85rem;">{{ log.detail|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if logs.has_other_pages %}
+        <div class="d-flex justify-content-center py-3">
+            <nav><ul class="pagination pagination-sm mb-0">
+                {% if logs.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ logs.previous_page_number }}&action={{ current_action }}">←</a></li>{% endif %}
+                <li class="page-item active"><span class="page-link">{{ logs.number }} / {{ logs.paginator.num_pages }}</span></li>
+                {% if logs.has_next %}<li class="page-item"><a class="page-link" href="?page={{ logs.next_page_number }}&action={{ current_action }}">→</a></li>{% endif %}
+            </ul></nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div style="text-align:center;padding:4rem 1rem;color:#9ca3af;">
+            <div style="font-size:.9rem;">Записей действий пока нет</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

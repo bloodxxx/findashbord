@@ -1,5 +1,6 @@
 import json
 import io
+import base64
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -8,6 +9,8 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
+from django.core.mail import send_mail
+from django.conf import settings
 import csv
 
 import openpyxl
@@ -15,19 +18,84 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
 
-from .models import Document, FinancialRecord, AnalysisResult, Metric
+from .models import Document, FinancialRecord, AnalysisResult, Metric, AuditLog, PanelSettings
 from .parsers import parse_document
 from .analyzers import analyze_document
 
 
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv', 'xml'}
-MAX_FILE_SIZE = 20 * 1024 * 1024 
+MAX_FILE_SIZE = 20 * 1024 * 1024
+
+
+def log_action(user, action, detail=''):
+    # запись действия пользователя в журнал аудита
+    AuditLog.objects.create(user=user, action=action, detail=detail[:500])
+
+
+def notify(user, subject, body):
+    # уведомление пользователя по email (тихо игнорируем при отсутствии адреса)
+    if user.email:
+        try:
+            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=True)
+        except Exception:
+            pass
+
+
+def process_upload(request, file, doc_type, period):
+    # обработка одного файла: валидация, парсинг, анализ; возвращает (document, error)
+    ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
+    if ext not in ALLOWED_EXTENSIONS:
+        return None, f'«{file.name}»: неподдерживаемый формат'
+    if file.size > MAX_FILE_SIZE:
+        return None, f'«{file.name}»: файл слишком большой (макс. 20 МБ)'
+    if doc_type not in dict(Document.DOCUMENT_TYPES):
+        return None, 'Выберите тип документа'
+
+    document = Document.objects.create(
+        user=request.user, file=file, file_name=file.name,
+        doc_type=doc_type, period=period, status=Document.STATUS_VALIDATING,
+    )
+    try:
+        document.file.seek(0)
+        records_data = parse_document(document.file, document.file_name, doc_type)
+        document.status = Document.STATUS_ANALYZING
+        document.save()
+
+        FinancialRecord.objects.filter(document=document).delete()
+        for rd in records_data:
+            FinancialRecord.objects.create(
+                document=document,
+                date=rd.get('date'), category=rd.get('category', ''),
+                amount=rd.get('amount', 0), record_type=rd.get('record_type', ''),
+                counterparty=rd.get('counterparty', ''), department=rd.get('department', ''),
+                indicator=rd.get('indicator', ''), plan_value=rd.get('plan_value'),
+                fact_value=rd.get('fact_value'), period=rd.get('period', ''),
+            )
+        analyze_document(document)
+        document.status = Document.STATUS_DONE
+        document.save()
+        log_action(request.user, AuditLog.ACTION_UPLOAD, f'Загружен и проанализирован «{document.file_name}»')
+        notify(request.user, 'Анализ завершён',
+               f'Документ «{document.file_name}» успешно проанализирован.')
+        return document, None
+    except ValueError as e:
+        document.status = Document.STATUS_ERROR
+        document.error_message = str(e)
+        document.save()
+        notify(request.user, 'Ошибка в данных',
+               f'Документ «{document.file_name}»: {e}')
+        return document, f'«{file.name}»: {e}'
+    except Exception as e:
+        document.status = Document.STATUS_ERROR
+        document.error_message = str(e)
+        document.save()
+        return document, f'«{file.name}»: ошибка при обработке'
 
 
 def login_view(request):
@@ -51,6 +119,7 @@ def register_view(request):
         return redirect('dashboard:upload')
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
         password2 = request.POST.get('password2', '')
         if not username or not password:
@@ -62,7 +131,7 @@ def register_view(request):
         elif User.objects.filter(username=username).exists():
             messages.error(request, 'Пользователь с таким именем уже существует')
         else:
-            User.objects.create_user(username=username, password=password)
+            User.objects.create_user(username=username, password=password, email=email)
             messages.success(request, 'Аккаунт создан. Войдите в систему.')
             return redirect('dashboard:login')
     return render(request, 'dashboard/register.html')
@@ -76,79 +145,31 @@ def logout_view(request):
 
 @login_required
 def upload_view(request):
-    # загрузка и обработка документа
+    # загрузка и обработка документов (поддержка массовой загрузки)
     if request.method == 'POST':
-        file = request.FILES.get('file')
+        files = request.FILES.getlist('file')
         doc_type = request.POST.get('doc_type', '')
         period = request.POST.get('period', '')
 
-        if not file:
+        if not files:
             messages.error(request, 'Выберите файл')
             return redirect('dashboard:upload')
 
-        ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
-        if ext not in ALLOWED_EXTENSIONS:
-            messages.error(request, f'Неподдерживаемый формат. Допустимые: {", ".join(ALLOWED_EXTENSIONS)}')
-            return redirect('dashboard:upload')
+        results = []
+        for f in files:
+            doc, err = process_upload(request, f, doc_type, period)
+            results.append((doc, err))
+            if err:
+                messages.error(request, f'Ошибка: {err}')
 
-        if file.size > MAX_FILE_SIZE:
-            messages.error(request, 'Файл слишком большой (максимум 20 МБ)')
-            return redirect('dashboard:upload')
-
-        if doc_type not in dict(Document.DOCUMENT_TYPES):
-            messages.error(request, 'Выберите тип документа')
-            return redirect('dashboard:upload')
-
-        document = Document.objects.create(
-            user=request.user,
-            file=file,
-            file_name=file.name,
-            doc_type=doc_type,
-            period=period,
-            status=Document.STATUS_VALIDATING,
-        )
-
-        try:
-            document.file.seek(0)
-            records_data = parse_document(document.file, document.file_name, doc_type)
-
-            document.status = Document.STATUS_ANALYZING
-            document.save()
-
-            FinancialRecord.objects.filter(document=document).delete()
-            for rd in records_data:
-                FinancialRecord.objects.create(
-                    document=document,
-                    date=rd.get('date'),
-                    category=rd.get('category', ''),
-                    amount=rd.get('amount', 0),
-                    record_type=rd.get('record_type', ''),
-                    counterparty=rd.get('counterparty', ''),
-                    department=rd.get('department', ''),
-                    indicator=rd.get('indicator', ''),
-                    plan_value=rd.get('plan_value'),
-                    fact_value=rd.get('fact_value'),
-                    period=rd.get('period', ''),
-                )
-
-            analyze_document(document)
-            document.status = Document.STATUS_DONE
-            document.save()
-            messages.success(request, f'Документ «{document.file_name}» успешно проанализирован')
-            return redirect('dashboard:document_detail', pk=document.pk)
-
-        except ValueError as e:
-            document.status = Document.STATUS_ERROR
-            document.error_message = str(e)
-            document.save()
-            messages.error(request, f'Ошибка: {e}')
-            return redirect('dashboard:upload')
-        except Exception as e:
-            document.status = Document.STATUS_ERROR
-            document.error_message = str(e)
-            document.save()
-            messages.error(request, 'Произошла ошибка при обработке файла')
-            return redirect('dashboard:upload')
+        ok = [d for d, e in results if e is None and d]
+        if len(ok) == 1 and len(results) == 1:
+            messages.success(request, f'Документ «{ok[0].file_name}» успешно проанализирован')
+            return redirect('dashboard:document_detail', pk=ok[0].pk)
+        if ok:
+            messages.success(request, f'Успешно обработано документов: {len(ok)} из {len(results)}')
+            return redirect('dashboard:history')
+        return redirect('dashboard:upload')
 
     recent_docs = Document.objects.filter(user=request.user)[:5]
     return render(request, 'dashboard/upload.html', {
@@ -197,7 +218,11 @@ def document_detail(request, pk):
     metrics = document.metrics.all()
     records = document.records.all()[:100]
 
+    log_action(request.user, AuditLog.ACTION_VIEW, f'Просмотр «{document.file_name}»')
+
     chart_data_json = json.dumps(analysis.chart_data if analysis else {})
+    panel_settings = getattr(request.user, 'panel_settings', None)
+    panel_config_json = json.dumps(panel_settings.config if panel_settings else {})
 
     return render(request, 'dashboard/document_detail.html', {
         'document': document,
@@ -205,6 +230,7 @@ def document_detail(request, pk):
         'metrics': metrics,
         'records': records,
         'chart_data_json': chart_data_json,
+        'panel_config_json': panel_config_json,
     })
 
 
@@ -213,7 +239,9 @@ def delete_document(request, pk):
     # удаление документа пользователя
     document = get_object_or_404(Document, pk=pk, user=request.user)
     if request.method == 'POST':
+        name = document.file_name
         document.delete()
+        log_action(request.user, AuditLog.ACTION_DELETE, f'Удалён «{name}»')
         messages.success(request, 'Документ удалён')
     return redirect('dashboard:history')
 
@@ -222,6 +250,7 @@ def delete_document(request, pk):
 def export_csv(request, pk):
     # экспорт записей документа в CSV файл
     document = get_object_or_404(Document, pk=pk, user=request.user)
+    log_action(request.user, AuditLog.ACTION_EXPORT, f'Экспорт CSV «{document.file_name}»')
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="report_{document.pk}.csv"'
     response.write('\ufeff')
@@ -254,6 +283,7 @@ def export_csv(request, pk):
 def export_excel(request, pk):
     # экспорт записей документа в Excel (.xlsx)
     document = get_object_or_404(Document, pk=pk, user=request.user)
+    log_action(request.user, AuditLog.ACTION_EXPORT, f'Экспорт Excel «{document.file_name}»')
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -282,14 +312,14 @@ def export_excel(request, pk):
         cell.alignment = align or center
 
     # заголовок документа
-    ws.merge_cells(f"A1:{chr(64 + 6)}1")
+    ws.merge_cells(f"A1:{chr(64 + num_cols)}1")
     title_cell = ws["A1"]
     title_cell.value = f"Отчёт: {document.file_name}"
     title_cell.font = Font(bold=True, size=13)
     title_cell.alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 28
 
-    ws.merge_cells(f"A2:{chr(64 + 6)}2")
+    ws.merge_cells(f"A2:{chr(64 + num_cols)}2")
     sub_cell = ws["A2"]
     sub_cell.value = f"{document.get_doc_type_display()} · {document.period or ''} · {document.uploaded_at.strftime('%d.%m.%Y')}"
     sub_cell.font = Font(italic=True, color="6B7280", size=10)
@@ -297,6 +327,7 @@ def export_excel(request, pk):
     ws.row_dimensions[2].height = 20
 
     data_start = 4  # строка с заголовками таблицы
+    num_cols = 6 if document.doc_type in ('budget', 'kpi') else 4
 
     if document.doc_type == 'income_expense':
         headers = ['Дата', 'Статья', 'Тип', 'Сумма']
@@ -409,6 +440,7 @@ def export_excel(request, pk):
 def export_pdf(request, pk):
     # экспорт записей документа в PDF
     document = get_object_or_404(Document, pk=pk, user=request.user)
+    log_action(request.user, AuditLog.ACTION_EXPORT, f'Экспорт PDF «{document.file_name}»')
 
     # регистрируем шрифт с поддержкой кириллицы
     font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'DejaVuSans.ttf')
@@ -594,3 +626,105 @@ def export_pdf(request, pk):
 def formats_view(request):
     # страница с описанием поддерживаемых форматов
     return render(request, 'dashboard/formats.html')
+
+
+@login_required
+@require_POST
+def export_visual(request, pk):
+    # экспорт построенных графиков дашборда в PDF (изображения приходят с клиента)
+    document = get_object_or_404(Document, pk=pk, user=request.user)
+    log_action(request.user, AuditLog.ACTION_EXPORT, f'Экспорт визуализаций «{document.file_name}»')
+
+    try:
+        payload = json.loads(request.body)
+        images = payload.get('images', [])
+    except Exception:
+        images = []
+
+    font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'DejaVuSans.ttf')
+    font_bold_path = os.path.join(os.path.dirname(__file__), 'fonts', 'DejaVuSans-Bold.ttf')
+    pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+    pdfmetrics.registerFont(TTFont('DejaVu-Bold', font_bold_path))
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            leftMargin=1.5 * cm, rightMargin=1.5 * cm,
+                            topMargin=1.5 * cm, bottomMargin=1.5 * cm)
+    title_style = ParagraphStyle('title', fontName='DejaVu-Bold', fontSize=14, alignment=1, spaceAfter=4)
+    sub_style = ParagraphStyle('sub', fontName='DejaVu', fontSize=9, alignment=1,
+                               textColor=colors.HexColor('#6B7280'), spaceAfter=14)
+    elements = [
+        Paragraph(f"Дашборд: {document.file_name}", title_style),
+        Paragraph(f"{document.get_doc_type_display()} · {document.period or ''} · "
+                  f"{document.uploaded_at.strftime('%d.%m.%Y')}", sub_style),
+    ]
+    page_w = A4[0] - 3 * cm
+    for img_b64 in images:
+        try:
+            raw = base64.b64decode(img_b64.split(',', 1)[-1])
+            img = Image(io.BytesIO(raw))
+            ratio = img.imageHeight / float(img.imageWidth or 1)
+            img.drawWidth = page_w
+            img.drawHeight = page_w * ratio
+            elements.append(img)
+            elements.append(Spacer(1, 0.6 * cm))
+        except Exception:
+            continue
+
+    if not images:
+        elements.append(Paragraph('Нет графиков для экспорта', sub_style))
+
+    doc.build(elements)
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="dashboard_{document.pk}.pdf"'
+    return response
+
+
+@login_required
+def api_document(request, pk):
+    # JSON API: данные документа для интеграции с внешними системами
+    document = get_object_or_404(Document, pk=pk, user=request.user)
+    analysis = getattr(document, 'analysis', None)
+    return JsonResponse({
+        'id': document.pk,
+        'file_name': document.file_name,
+        'doc_type': document.doc_type,
+        'period': document.period,
+        'period_start': document.period_start.isoformat() if document.period_start else None,
+        'period_end': document.period_end.isoformat() if document.period_end else None,
+        'status': document.status,
+        'metrics': [{'name': m.metric_name, 'value': float(m.value)} for m in document.metrics.all()],
+        'chart_data': analysis.chart_data if analysis else {},
+    })
+
+
+@login_required
+def audit_view(request):
+    # журнал аудита действий пользователя
+    logs_qs = AuditLog.objects.filter(user=request.user)
+    action_filter = request.GET.get('action', '')
+    if action_filter:
+        logs_qs = logs_qs.filter(action=action_filter)
+    paginator = Paginator(logs_qs, 25)
+    logs = paginator.get_page(request.GET.get('page', 1))
+    return render(request, 'dashboard/audit.html', {
+        'logs': logs,
+        'actions': AuditLog.ACTIONS,
+        'current_action': action_filter,
+    })
+
+
+@login_required
+@require_POST
+def save_panels(request, pk):
+    # сохранение настроек панелей мониторинга (видимость/порядок графиков)
+    get_object_or_404(Document, pk=pk, user=request.user)
+    try:
+        config = json.loads(request.body)
+    except Exception:
+        config = {}
+    ps, _ = PanelSettings.objects.get_or_create(user=request.user)
+    ps.config = config
+    ps.save()
+    return JsonResponse({'ok': True})

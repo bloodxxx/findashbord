@@ -34,6 +34,8 @@ class Document(models.Model):
     file_name = models.CharField(max_length=255)
     doc_type = models.CharField(max_length=30, choices=DOCUMENT_TYPES)
     period = models.CharField(max_length=100, blank=True)
+    period_start = models.DateField(null=True, blank=True)  # автоопределение начала периода
+    period_end = models.DateField(null=True, blank=True)    # автоопределение конца периода
     status = models.CharField(max_length=20, choices=STATUSES, default=STATUS_UPLOADED)
     error_message = models.TextField(blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
@@ -86,3 +88,36 @@ class Metric(models.Model):
 
     def __str__(self):
         return f"{self.metric_name}: {self.value}"
+
+
+class AuditLog(models.Model):
+    # аудит действий пользователя (кто загружал/просматривал/экспортировал)
+    ACTION_UPLOAD = 'upload'
+    ACTION_VIEW = 'view'
+    ACTION_EXPORT = 'export'
+    ACTION_DELETE = 'delete'
+    ACTIONS = [
+        (ACTION_UPLOAD, 'Загрузка'),
+        (ACTION_VIEW, 'Просмотр'),
+        (ACTION_EXPORT, 'Экспорт'),
+        (ACTION_DELETE, 'Удаление'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='audit_logs')
+    action = models.CharField(max_length=20, choices=ACTIONS)
+    detail = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user} · {self.get_action_display()} · {self.created_at}"
+
+
+class PanelSettings(models.Model):
+    # настройки панелей мониторинга пользователя (какие графики показывать, порядок)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='panel_settings')
+    config = models.JSONField(default=dict, blank=True)
+
+    def __str__(self):
+        return f"Panels: {self.user}"

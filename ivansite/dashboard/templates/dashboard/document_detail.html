@@ -11,6 +11,7 @@
         <span style="color:#d1d5db;">·</span>
         <span style="font-size:.82rem;color:#9ca3af;">{{ document.uploaded_at|date:"d.m.Y H:i" }}</span>
         {% if document.period %}<span style="color:#d1d5db;">·</span><span style="font-size:.82rem;color:#9ca3af;">{{ document.period }}</span>{% endif %}
+        {% if document.period_start %}<span style="color:#d1d5db;">·</span><span style="font-size:.82rem;color:#7c3aed;font-weight:600;" title="Автоопределённый период">{{ document.period_start|date:"d.m.Y" }} — {{ document.period_end|date:"d.m.Y" }}</span>{% endif %}
     </div>
     <div class="d-flex gap-2 flex-shrink-0">
         <div class="dropdown">
@@ -20,6 +21,13 @@
                 <span class="d-sm-none">Скачать</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="#" onclick="exportVisual(event)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.4rem;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                        Дашборд с графиками (PDF)
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
                 <li>
                     <a class="dropdown-item" href="{% url 'dashboard:export_excel' document.pk %}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.4rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -69,10 +77,42 @@
     {% endfor %}
 </div>
 
+<!-- Panel control bar (Grafana-style monitoring panels) -->
+<div class="card mb-4" id="panelToolbar">
+    <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap">
+        {% if document.doc_type == 'income_expense' or document.doc_type == 'cash_flow' %}
+        <div class="d-flex align-items-center gap-2">
+            <span style="font-size:.78rem;font-weight:600;color:#374151;">Период:</span>
+            <select id="granSelect" class="form-select form-select-sm" style="width:auto;">
+                <option value="raw">По датам</option>
+                <option value="day">День</option>
+                <option value="week">Неделя</option>
+                <option value="month" selected>Месяц</option>
+                <option value="quarter">Квартал</option>
+            </select>
+        </div>
+        <span style="color:#e5e7eb;">|</span>
+        {% endif %}
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.3rem;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Панели
+            </button>
+            <ul class="dropdown-menu p-2" id="panelMenu" style="font-size:.82rem;"></ul>
+        </div>
+        <span style="color:#e5e7eb;">|</span>
+        <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="autoRefresh">
+            <label class="form-check-label" for="autoRefresh" style="font-size:.78rem;color:#374151;">Автообновление</label>
+        </div>
+        <span id="refreshNote" style="font-size:.72rem;color:#9ca3af;"></span>
+    </div>
+</div>
+
 <!-- Charts -->
 {% if document.doc_type == 'income_expense' %}
-<div class="row g-4 mb-4">
-    <div class="col-12 col-lg-7">
+<div class="row g-4 mb-4" id="panelGrid">
+    <div class="col-12 col-lg-7" data-panel="line" data-panel-title="Динамика доходов и расходов">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -81,7 +121,7 @@
             <div class="card-body"><canvas id="lineChart"></canvas></div>
         </div>
     </div>
-    <div class="col-12 col-lg-5">
+    <div class="col-12 col-lg-5" data-panel="pie" data-panel-title="Структура расходов">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
@@ -90,11 +130,20 @@
             <div class="card-body"><canvas id="pieChart"></canvas></div>
         </div>
     </div>
+    <div class="col-lg-12" data-panel="forecast" data-panel-title="Прогноз доходов">
+        <div class="card">
+            <div class="card-header">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                Прогноз доходов (тренд на 3 периода вперёд)
+            </div>
+            <div class="card-body"><canvas id="forecastChart" height="80"></canvas></div>
+        </div>
+    </div>
 </div>
 
 {% elif document.doc_type == 'cash_flow' %}
-<div class="row g-4 mb-4">
-    <div class="col-12 col-lg-7">
+<div class="row g-4 mb-4" id="panelGrid">
+    <div class="col-12 col-lg-7" data-panel="bar" data-panel-title="Поступления и списания">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
@@ -103,7 +152,7 @@
             <div class="card-body"><canvas id="barChart"></canvas></div>
         </div>
     </div>
-    <div class="col-12 col-lg-5">
+    <div class="col-12 col-lg-5" data-panel="balance" data-panel-title="Динамика остатка">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -112,11 +161,20 @@
             <div class="card-body"><canvas id="balanceChart"></canvas></div>
         </div>
     </div>
+    <div class="col-lg-12" data-panel="forecast" data-panel-title="Прогноз чистого потока">
+        <div class="card">
+            <div class="card-header">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                Прогноз чистого потока (тренд на 3 периода вперёд)
+            </div>
+            <div class="card-body"><canvas id="forecastChart" height="80"></canvas></div>
+        </div>
+    </div>
 </div>
 
 {% elif document.doc_type == 'budget' %}
-<div class="row g-4 mb-4">
-    <div class="col-12 col-lg-7">
+<div class="row g-4 mb-4" id="panelGrid">
+    <div class="col-12 col-lg-7" data-panel="plan_fact" data-panel-title="План vs Факт">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -125,7 +183,7 @@
             <div class="card-body"><canvas id="planFactChart"></canvas></div>
         </div>
     </div>
-    <div class="col-12 col-lg-5">
+    <div class="col-12 col-lg-5" data-panel="deviation" data-panel-title="Отклонения">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -137,8 +195,8 @@
 </div>
 
 {% elif document.doc_type == 'kpi' %}
-<div class="row g-4 mb-4">
-    <div class="col-12 col-lg-7">
+<div class="row g-4 mb-4" id="panelGrid">
+    <div class="col-12 col-lg-7" data-panel="kpi_bar" data-panel-title="Выполнение KPI">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
@@ -147,7 +205,7 @@
             <div class="card-body"><canvas id="kpiBarChart"></canvas></div>
         </div>
     </div>
-    <div class="col-12 col-lg-5">
+    <div class="col-12 col-lg-5" data-panel="kpi_status" data-panel-title="Статус показателей">
         <div class="card">
             <div class="card-header">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -231,57 +289,184 @@
 
 {% block extra_js %}
 <script>
-const D = {{ chart_data_json|safe }};
+let D = {{ chart_data_json|safe }};
+const PANEL_CFG = {{ panel_config_json|safe }};
+const DOC_TYPE = '{{ document.doc_type }}';
+const PANELS_URL = '{% url 'dashboard:save_panels' document.pk %}';
+const API_URL = '{% url 'dashboard:api_document' document.pk %}';
+const CSRF = '{{ csrf_token }}';
 const COLORS = ['#7c3aed','#2563eb','#0891b2','#059669','#d97706','#dc2626','#db2777','#7c3aed'];
+const charts = {};
+
+function lineSeries(gran) {
+    // выбор данных временного ряда по гранулярности
+    if (gran === 'raw') return null;
+    return (D.periods && D.periods[gran]) ? D.periods[gran] : null;
+}
+
+function buildCharts() {
+    Object.values(charts).forEach(c => c && c.destroy());
+    const gran = document.getElementById('granSelect') ? document.getElementById('granSelect').value : 'raw';
 
 {% if document.doc_type == 'income_expense' %}
-if (D.line) new Chart('lineChart', {type:'line',data:{labels:D.line.labels,datasets:[
-    {label:'Доходы',data:D.line.income,borderColor:'#059669',backgroundColor:'rgba(5,150,105,.08)',fill:true,tension:.35,pointRadius:3},
-    {label:'Расходы',data:D.line.expense,borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.08)',fill:true,tension:.35,pointRadius:3},
-]},options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:12}}}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+    const p = lineSeries(gran);
+    const lbl = p ? p.labels : (D.line ? D.line.labels : []);
+    const inc = p ? p.income : (D.line ? D.line.income : []);
+    const exp = p ? p.expense : (D.line ? D.line.expense : []);
+    if (document.getElementById('lineChart')) charts.line = new Chart('lineChart', {type:'line',data:{labels:lbl,datasets:[
+        {label:'Доходы',data:inc,borderColor:'#059669',backgroundColor:'rgba(5,150,105,.08)',fill:true,tension:.35,pointRadius:3},
+        {label:'Расходы',data:exp,borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.08)',fill:true,tension:.35,pointRadius:3},
+    ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
 
-if (D.pie && D.pie.labels.length) new Chart('pieChart', {type:'doughnut',data:{labels:D.pie.labels,datasets:[{data:D.pie.values,backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:11}}},cutout:'60%'}});
+    if (D.pie && D.pie.labels.length && document.getElementById('pieChart')) charts.pie = new Chart('pieChart', {type:'doughnut',data:{labels:D.pie.labels,datasets:[{data:D.pie.values,backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:11}}},cutout:'60%'}});
+
+    if (D.forecast && document.getElementById('forecastChart') && f.income && f.income.length > 0) {
+        const f = D.forecast;
+        const labels = f.labels.concat(Array.from({length:f.next.length},(_, i)=>'Прогноз '+(i+1)));
+        const hist = f.income.concat(Array(f.next.length).fill(null));
+        const fc = Array(f.income.length-1).fill(null).concat([f.income[f.income.length-1]], f.next);
+        charts.forecast = new Chart('forecastChart', {type:'line',data:{labels:labels,datasets:[
+            {label:'Факт',data:hist,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.08)',fill:true,tension:.3,pointRadius:3},
+            {label:'Прогноз',data:fc,borderColor:'#d97706',borderDash:[6,4],tension:.3,pointRadius:3},
+        ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+    }
 
 {% elif document.doc_type == 'cash_flow' %}
-if (D.bar) new Chart('barChart', {type:'bar',data:{labels:D.bar.labels,datasets:[
-    {label:'Поступления',data:D.bar.inflow,backgroundColor:'rgba(5,150,105,.75)',borderRadius:4},
-    {label:'Списания',data:D.bar.outflow,backgroundColor:'rgba(220,38,38,.7)',borderRadius:4},
-]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+    const p = lineSeries(gran);
+    const lbl = p ? p.labels : (D.bar ? D.bar.labels : []);
+    const inf = p ? p.inflow : (D.bar ? D.bar.inflow : []);
+    const ouf = p ? p.outflow : (D.bar ? D.bar.outflow : []);
+    if (document.getElementById('barChart')) charts.bar = new Chart('barChart', {type:'bar',data:{labels:lbl,datasets:[
+        {label:'Поступления',data:inf,backgroundColor:'rgba(5,150,105,.75)',borderRadius:4},
+        {label:'Списания',data:ouf,backgroundColor:'rgba(220,38,38,.7)',borderRadius:4},
+    ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
 
-if (D.balance_line) new Chart('balanceChart', {type:'line',data:{labels:D.balance_line.labels,datasets:[{label:'Остаток',data:D.balance_line.values,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.08)',fill:true,tension:.35,pointRadius:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+    if (D.balance_line && document.getElementById('balanceChart')) charts.balance = new Chart('balanceChart', {type:'line',data:{labels:D.balance_line.labels,datasets:[{label:'Остаток',data:D.balance_line.values,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.08)',fill:true,tension:.35,pointRadius:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+
+    if (D.forecast && document.getElementById('forecastChart') && f.net && f.net.length > 0) {
+        const f = D.forecast;
+        const labels = f.labels.concat(Array.from({length:f.next.length},(_, i)=>'Прогноз '+(i+1)));
+        const hist = f.net.concat(Array(f.next.length).fill(null));
+        const fc = Array(f.net.length-1).fill(null).concat([f.net[f.net.length-1]], f.next);
+        charts.forecast = new Chart('forecastChart', {type:'line',data:{labels:labels,datasets:[
+            {label:'Чистый поток',data:hist,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.08)',fill:true,tension:.3,pointRadius:3},
+            {label:'Прогноз',data:fc,borderColor:'#d97706',borderDash:[6,4],tension:.3,pointRadius:3},
+        ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+    }
 
 {% elif document.doc_type == 'budget' %}
-if (D.plan_fact) new Chart('planFactChart', {type:'bar',data:{labels:D.plan_fact.labels,datasets:[
-    {label:'План',data:D.plan_fact.plan,backgroundColor:'rgba(37,99,235,.65)',borderRadius:4},
-    {label:'Факт',data:D.plan_fact.fact,backgroundColor:'rgba(5,150,105,.7)',borderRadius:4},
-]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+    if (D.plan_fact && document.getElementById('planFactChart')) charts.plan_fact = new Chart('planFactChart', {type:'bar',data:{labels:D.plan_fact.labels,datasets:[
+        {label:'План',data:D.plan_fact.plan,backgroundColor:'rgba(37,99,235,.65)',borderRadius:4},
+        {label:'Факт',data:D.plan_fact.fact,backgroundColor:'rgba(5,150,105,.7)',borderRadius:4},
+    ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
 
-if (D.deviation) new Chart('deviationChart', {type:'bar',data:{labels:D.deviation.labels,datasets:[{label:'Отклонение',data:D.deviation.values,backgroundColor:D.deviation.values.map(v=>v>=0?'rgba(5,150,105,.7)':'rgba(220,38,38,.7)'),borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+    if (D.deviation && document.getElementById('deviationChart')) charts.deviation = new Chart('deviationChart', {type:'bar',data:{labels:D.deviation.labels,datasets:[{label:'Отклонение',data:D.deviation.values,backgroundColor:D.deviation.values.map(v=>v>=0?'rgba(5,150,105,.7)':'rgba(220,38,38,.7)'),borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
 
 {% elif document.doc_type == 'kpi' %}
-if (D.kpi_bar) new Chart('kpiBarChart', {type:'bar',data:{labels:D.kpi_bar.labels,datasets:[
-    {label:'План',data:D.kpi_bar.plan,backgroundColor:'rgba(37,99,235,.65)',borderRadius:4},
-    {label:'Факт',data:D.kpi_bar.fact,backgroundColor:'rgba(5,150,105,.7)',borderRadius:4},
-]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
+    if (D.kpi_bar && document.getElementById('kpiBarChart')) charts.kpi_bar = new Chart('kpiBarChart', {type:'bar',data:{labels:D.kpi_bar.labels,datasets:[
+        {label:'План',data:D.kpi_bar.plan,backgroundColor:'rgba(37,99,235,.65)',borderRadius:4},
+        {label:'Факт',data:D.kpi_bar.fact,backgroundColor:'rgba(5,150,105,.7)',borderRadius:4},
+    ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{grid:{color:'#f3f4f6'}}}}});
 
-if (D.indicators && D.statuses) {
     const el = document.getElementById('kpiStatusList');
-    const clr = {success:'#059669',warning:'#d97706',danger:'#dc2626'};
-    const lbl = {success:'Выполнен',warning:'Частично',danger:'Не выполнен'};
-    const bg  = {success:'#d1fae5',warning:'#fef3c7',danger:'#fee2e2'};
-    D.indicators.forEach((ind,i) => {
-        const pct = D.pct_list[i], st = D.statuses[i];
-        el.innerHTML += `<div style="margin-bottom:.9rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
-                <span style="font-size:.8rem;font-weight:500;max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ind}</span>
-                <span style="font-size:.72rem;font-weight:700;padding:.15rem .5rem;border-radius:5px;background:${bg[st]};color:${clr[st]};">${lbl[st]} ${pct}%</span>
-            </div>
-            <div style="height:6px;background:#f3f4f6;border-radius:999px;overflow:hidden;">
-                <div style="height:100%;width:${Math.min(pct,100)}%;background:${clr[st]};border-radius:999px;transition:width .5s;"></div>
-            </div>
-        </div>`;
+    if (D.indicators && D.statuses && el) {
+        el.innerHTML = '';
+        const clr = {success:'#059669',warning:'#d97706',danger:'#dc2626'};
+        const lbl = {success:'Выполнен',warning:'Частично',danger:'Не выполнен'};
+        const bg  = {success:'#d1fae5',warning:'#fef3c7',danger:'#fee2e2'};
+        D.indicators.forEach((ind,i) => {
+            const pct = D.pct_list[i], st = D.statuses[i];
+            el.innerHTML += `<div style="margin-bottom:.9rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
+                    <span style="font-size:.8rem;font-weight:500;max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ind}</span>
+                    <span style="font-size:.72rem;font-weight:700;padding:.15rem .5rem;border-radius:5px;background:${bg[st]};color:${clr[st]};">${lbl[st]} ${pct}%</span>
+                </div>
+                <div style="height:6px;background:#f3f4f6;border-radius:999px;overflow:hidden;">
+                    <div style="height:100%;width:${Math.min(pct,100)}%;background:${clr[st]};border-radius:999px;transition:width .5s;"></div>
+                </div>
+            </div>`;
+        });
+    }
+{% endif %}
+}
+
+// ── Панели мониторинга: показ/скрытие + сохранение конфигурации ──
+function setupPanels() {
+    const grid = document.getElementById('panelGrid');
+    const menu = document.getElementById('panelMenu');
+    if (!grid || !menu) return;
+    const panels = Array.from(grid.querySelectorAll('[data-panel]'));
+    const hidden = (PANEL_CFG[DOC_TYPE] && PANEL_CFG[DOC_TYPE].hidden) || [];
+
+    panels.forEach(p => {
+        const key = p.dataset.panel;
+        if (hidden.includes(key)) p.style.display = 'none';
+        const li = document.createElement('li');
+        li.innerHTML = `<label class="dropdown-item d-flex align-items-center gap-2" style="cursor:pointer;">
+            <input type="checkbox" ${hidden.includes(key)?'':'checked'} data-key="${key}"> ${p.dataset.panelTitle}</label>`;
+        menu.appendChild(li);
+    });
+
+    menu.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const key = cb.dataset.key;
+            const panel = grid.querySelector(`[data-panel="${key}"]`);
+            panel.style.display = cb.checked ? '' : 'none';
+            savePanels();
+        });
     });
 }
-{% endif %}
+
+function savePanels() {
+    const grid = document.getElementById('panelGrid');
+    const hidden = Array.from(grid.querySelectorAll('[data-panel]'))
+        .filter(p => p.style.display === 'none').map(p => p.dataset.panel);
+    const cfg = Object.assign({}, PANEL_CFG);
+    cfg[DOC_TYPE] = {hidden};
+    fetch(PANELS_URL, {method:'POST', headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'}, body:JSON.stringify(cfg)});
+}
+
+// ── Автообновление: подтягиваем свежие данные через API ──
+let refreshTimer = null;
+function setupAutoRefresh() {
+    const sw = document.getElementById('autoRefresh');
+    const note = document.getElementById('refreshNote');
+    if (!sw) return;
+    sw.addEventListener('change', () => {
+        if (sw.checked) {
+            note.textContent = 'обновление каждые 15 с';
+            refreshTimer = setInterval(async () => {
+                try {
+                    const r = await fetch(API_URL);
+                    const j = await r.json();
+                    if (j.chart_data) { D = j.chart_data; buildCharts(); note.textContent = 'обновлено в ' + new Date().toLocaleTimeString(); }
+                } catch(e) {}
+            }, 15000);
+        } else { clearInterval(refreshTimer); note.textContent = ''; }
+    });
+}
+
+// ── Экспорт визуализаций (графики -> PDF) ──
+async function exportVisual(ev) {
+    ev.preventDefault();
+    const images = Object.values(charts).filter(Boolean).map(c => c.toBase64Image());
+    const r = await fetch('{% url 'dashboard:export_visual' document.pk %}', {
+        method:'POST', headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},
+        body:JSON.stringify({images})
+    });
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'dashboard_{{ document.pk }}.pdf';
+    a.click();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    buildCharts();
+    setupPanels();
+    setupAutoRefresh();
+    const gs = document.getElementById('granSelect');
+    if (gs) gs.addEventListener('change', buildCharts);
+});
 </script>
 {% endblock %}

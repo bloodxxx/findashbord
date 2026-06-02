@@ -3,9 +3,67 @@ from collections import defaultdict
 from .models import FinancialRecord, AnalysisResult, Metric
 
 
+GRANS = ['day', 'week', 'month', 'quarter']
+
+
+def _period_key(d, gran):
+    # ключ агрегации даты по гранулярности (день/неделя/месяц/квартал)
+    if gran == 'week':
+        y, w, _ = d.isocalendar()
+        return f"{y}-W{w:02d}"
+    if gran == 'month':
+        return f"{d.year}-{d.month:02d}"
+    if gran == 'quarter':
+        return f"{d.year}-Q{(d.month - 1) // 3 + 1}"
+    return d.isoformat()
+
+
+def _aggregate_by_gran(records, fields):
+    # агрегация записей по всем гранулярностям; fields: {имя: функция(record)->Decimal}
+    out = {}
+    for gran in GRANS:
+        buckets = defaultdict(lambda: {k: Decimal('0') for k in fields})
+        for r in records:
+            if not r.date:
+                continue
+            key = _period_key(r.date, gran)
+            for name, fn in fields.items():
+                buckets[key][name] += fn(r)
+        labels = sorted(buckets.keys())
+        series = {'labels': labels}
+        for name in fields:
+            series[name] = [float(buckets[l][name]) for l in labels]
+        out[gran] = series
+    return out
+
+
+def _forecast(values, periods=1):
+    # линейный прогноз тренда (метод наименьших квадратов) на следующие периоды
+    n = len(values)
+    if n < 2:
+        return [values[-1] if values else 0.0] * periods
+    xs = list(range(n))
+    mean_x = sum(xs) / n
+    mean_y = sum(values) / n
+    denom = sum((x - mean_x) ** 2 for x in xs) or 1
+    slope = sum((xs[i] - mean_x) * (values[i] - mean_y) for i in range(n)) / denom
+    intercept = mean_y - slope * mean_x
+    return [round(slope * (n - 1 + k) + intercept, 2) for k in range(1, periods + 1)]
+
+
+def _detect_period(document, records):
+    # автоопределение дат начала и конца периода по данным
+    dates = [r.date for r in records if r.date]
+    if dates:
+        document.period_start = min(dates)
+        document.period_end = max(dates)
+        document.save(update_fields=['period_start', 'period_end'])
+
+
 def analyze_document(document):
     # маршрутизация анализа по типу документа
-    records = document.records.all()
+    records = list(document.records.all())
+    _detect_period(document, records)
     doc_type = document.doc_type
 
     if doc_type == 'income_expense':
@@ -47,7 +105,20 @@ def _analyze_income_expense(document, records):
             'labels': list(by_category.keys()),
             'values': [float(v) for v in by_category.values()],
         },
+        'periods': _aggregate_by_gran(records, {
+            'income': lambda r: r.amount if r.record_type == 'income' else Decimal('0'),
+            'expense': lambda r: r.amount if r.record_type != 'income' else Decimal('0'),
+        }),
     }
+    # прогноз доходов на следующий период по месячному тренду
+    monthly_income = chart_data['periods']['month']['income']
+    chart_data['forecast'] = {
+        'labels': chart_data['periods']['month']['labels'],
+        'income': monthly_income,
+        'next': _forecast(monthly_income, 3),
+    }
+
+    ratio = float(total_income / total_expense) if total_expense else 0
 
     result, _ = AnalysisResult.objects.update_or_create(
         document=document,
@@ -62,6 +133,7 @@ def _analyze_income_expense(document, records):
     Metric.objects.create(document=document, metric_name='Общие доходы', value=total_income)
     Metric.objects.create(document=document, metric_name='Общие расходы', value=total_expense)
     Metric.objects.create(document=document, metric_name='Прибыль', value=profit)
+    Metric.objects.create(document=document, metric_name='Доход / Расход', value=round(ratio, 2))
     return result
 
 
@@ -70,12 +142,15 @@ def _analyze_cash_flow(document, records):
     total_inflow = Decimal('0')
     total_outflow = Decimal('0')
     by_date = defaultdict(lambda: {'inflow': Decimal('0'), 'outflow': Decimal('0')})
+    by_counterparty = defaultdict(Decimal)
 
     for r in records:
         if r.record_type == 'inflow':
             total_inflow += r.amount
         else:
             total_outflow += r.amount
+        if r.counterparty:
+            by_counterparty[r.counterparty] += r.amount
         date_key = str(r.date) if r.date else 'N/A'
         by_date[date_key][r.record_type if r.record_type in ('inflow', 'outflow') else 'outflow'] += r.amount
 
@@ -97,7 +172,21 @@ def _analyze_cash_flow(document, records):
             'labels': sorted_dates,
             'values': cumulative_list,
         },
+        'periods': _aggregate_by_gran(records, {
+            'inflow': lambda r: r.amount if r.record_type == 'inflow' else Decimal('0'),
+            'outflow': lambda r: r.amount if r.record_type != 'inflow' else Decimal('0'),
+        }),
     }
+    monthly_net = [i - o for i, o in zip(
+        chart_data['periods']['month']['inflow'], chart_data['periods']['month']['outflow'])]
+    chart_data['forecast'] = {
+        'labels': chart_data['periods']['month']['labels'],
+        'net': monthly_net,
+        'next': _forecast(monthly_net, 3),
+    }
+
+    cp_count = len(by_counterparty)
+    avg_per_cp = float(sum(by_counterparty.values()) / cp_count) if cp_count else 0
 
     result, _ = AnalysisResult.objects.update_or_create(
         document=document,
@@ -113,7 +202,7 @@ def _analyze_cash_flow(document, records):
     Metric.objects.create(document=document, metric_name='Поступления', value=total_inflow)
     Metric.objects.create(document=document, metric_name='Списания', value=total_outflow)
     Metric.objects.create(document=document, metric_name='Остаток', value=balance)
-    Metric.objects.create(document=document, metric_name='Чистый поток', value=balance)
+    Metric.objects.create(document=document, metric_name='Средний оборот на контрагента', value=round(avg_per_cp, 2))
     return result
 
 

@@ -18,10 +18,10 @@
 
                     <div class="drop-zone mb-3" id="dropZone" onclick="document.getElementById('fileInput').click()">
                         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto .5rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                        <div class="fw-semibold" style="color:#374151;font-size:.9rem;" id="dropText">Перетащите файл сюда или нажмите для выбора</div>
-                        <div class="text-muted mt-1" style="font-size:.78rem;">Excel (.xlsx, .xls) &nbsp;·&nbsp; CSV (.csv) &nbsp;·&nbsp; XML (.xml) &nbsp;·&nbsp; до 20 МБ</div>
+                        <div class="fw-semibold" style="color:#374151;font-size:.9rem;" id="dropText">Перетащите файлы сюда или нажмите для выбора</div>
+                        <div class="text-muted mt-1" style="font-size:.78rem;">Можно выбрать несколько файлов · Excel (.xlsx, .xls) &nbsp;·&nbsp; CSV (.csv) &nbsp;·&nbsp; XML (.xml) &nbsp;·&nbsp; до 20 МБ</div>
                     </div>
-                    <input type="file" name="file" id="fileInput" accept=".xlsx,.xls,.csv,.xml" class="d-none" required>
+                    <input type="file" name="file" id="fileInput" accept=".xlsx,.xls,.csv,.xml" class="d-none" multiple required>
 
                     <div class="mb-3">
                         <label class="form-label">Тип документа <span class="text-danger">*</span></label>
@@ -129,7 +129,8 @@ const dropText = document.getElementById('dropText');
 
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length) {
-        dropText.textContent = fileInput.files[0].name;
+        const n = fileInput.files.length;
+        dropText.textContent = n === 1 ? fileInput.files[0].name : `Выбрано файлов: ${n}`;
         dropZone.style.borderColor = '#7c3aed';
         dropZone.style.background = '#ede9fe';
     }
@@ -138,7 +139,7 @@ fileInput.addEventListener('change', () => {
 ['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); }));
 dropZone.addEventListener('drop', ev => {
     const f = ev.dataTransfer.files;
-    if (f.length) { fileInput.files = f; dropText.textContent = f[0].name; dropZone.style.borderColor = '#7c3aed'; }
+    if (f.length) { fileInput.files = f; dropText.textContent = f.length === 1 ? f[0].name : `Выбрано файлов: ${f.length}`; dropZone.style.borderColor = '#7c3aed'; }
 });
 document.getElementById('uploadForm').addEventListener('submit', () => {
     document.getElementById('submitBtn').disabled = true;
