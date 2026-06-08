@@ -25,7 +25,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 import os
 
 from .models import Document, FinancialRecord, AnalysisResult, Metric, AuditLog, PanelSettings
-from .parsers import parse_document
+from .parsers import parse_document, detect_doc_type
 from .analyzers import analyze_document
 
 
@@ -153,6 +153,10 @@ def upload_view(request):
 
         if not files:
             messages.error(request, 'Выберите файл')
+            return redirect('dashboard:upload')
+
+        if not doc_type or doc_type not in dict(Document.DOCUMENT_TYPES):
+            messages.error(request, 'Выберите тип документа')
             return redirect('dashboard:upload')
 
         results = []
@@ -620,6 +624,16 @@ def export_pdf(request, pk):
     response = HttpResponse(buffer.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="report_{document.pk}.pdf"'
     return response
+
+
+@login_required
+def detect_type(request):
+    if request.method != 'POST' or 'file' not in request.FILES:
+        return JsonResponse({'doc_type': None})
+    f = request.FILES['file']
+    f.seek(0)
+    result = detect_doc_type(f, f.name)
+    return JsonResponse({'doc_type': result})
 
 
 @login_required

@@ -19,4 +19,5 @@ urlpatterns = [
     path('document/<int:pk>/api/', views.api_document, name='api_document'),
     path('document/<int:pk>/panels/', views.save_panels, name='save_panels'),
     path('formats/', views.formats_view, name='formats'),
+    path('detect/', views.detect_type, name='detect_type'),
 ]

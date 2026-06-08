@@ -1,0 +1,12 @@
+docs/
+.claude/
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+media/
+*.xlsx
+*.xls
+*.csv
+*.xml
+*.pdf

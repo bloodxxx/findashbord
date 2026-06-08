@@ -170,6 +170,22 @@ def parse_kpi(df, mapping):
     return records
 
 
+def detect_doc_type(file_obj, file_name):
+    try:
+        df = load_dataframe(file_obj, file_name)
+    except Exception:
+        return None
+    best_type, best_score = None, 0
+    for doc_type, required in REQUIRED_COLUMNS.items():
+        mapping = map_columns(df, doc_type)
+        matched = sum(1 for r in required if r in mapping)
+        if matched > best_score or (matched == best_score and best_type is None):
+            best_score, best_type = matched, doc_type
+    if best_type and best_score >= len(REQUIRED_COLUMNS[best_type]) * 0.5:
+        return best_type
+    return None
+
+
 def parse_document(file_obj, file_name, doc_type):
     # точка входа для парсинга документа по типу
     df = load_dataframe(file_obj, file_name)

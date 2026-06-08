@@ -25,12 +25,13 @@
 
                     <div class="mb-3">
                         <label class="form-label">Тип документа <span class="text-danger">*</span></label>
-                        <select name="doc_type" class="form-select" required>
+                        <select name="doc_type" id="docTypeSelect" class="form-select">
                             <option value="">— Выберите тип —</option>
                             {% for val, label in document_types %}
                             <option value="{{ val }}">{{ label }}</option>
                             {% endfor %}
                         </select>
+                        <div id="detectHint" style="font-size:.75rem;color:#7c3aed;margin-top:.35rem;display:none;"></div>
                     </div>
 
                     <div class="mb-4">
@@ -127,22 +128,58 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const dropText = document.getElementById('dropText');
 
-fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) {
-        const n = fileInput.files.length;
-        dropText.textContent = n === 1 ? fileInput.files[0].name : `Выбрано файлов: ${n}`;
-        dropZone.style.borderColor = '#7c3aed';
-        dropZone.style.background = '#ede9fe';
-    }
-});
+const DETECT_URL = '{% url 'dashboard:detect_type' %}';
+const CSRF = '{{ csrf_token }}';
+const DOC_TYPE_LABELS = {
+    {% for val, label in document_types %}'{{ val }}': '{{ label }}',{% endfor %}
+};
+const docTypeSelect = document.getElementById('docTypeSelect');
+const detectHint = document.getElementById('detectHint');
+const submitBtn = document.getElementById('submitBtn');
+
+function runDetect(file) {
+    if (!file) return;
+    detectHint.style.display = 'none';
+    submitBtn.disabled = true;
+    const fd = new FormData();
+    fd.append('file', file);
+    fetch(DETECT_URL, {method: 'POST', headers: {'X-CSRFToken': CSRF}, body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.doc_type) {
+                docTypeSelect.value = data.doc_type;
+                detectHint.textContent = 'Определено автоматически: ' + (DOC_TYPE_LABELS[data.doc_type] || data.doc_type);
+                detectHint.style.display = '';
+            }
+            submitBtn.disabled = false;
+        })
+        .catch(() => { submitBtn.disabled = false; });
+}
+
+function setFiles(files) {
+    if (!files.length) return;
+    const n = files.length;
+    dropText.textContent = n === 1 ? files[0].name : `Выбрано файлов: ${n}`;
+    dropZone.style.borderColor = '#7c3aed';
+    dropZone.style.background = '#ede9fe';
+    runDetect(files[0]);
+}
+
+fileInput.addEventListener('change', () => setFiles(fileInput.files));
+
 ['dragover','dragenter'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); }));
 ['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); }));
 dropZone.addEventListener('drop', ev => {
     const f = ev.dataTransfer.files;
-    if (f.length) { fileInput.files = f; dropText.textContent = f.length === 1 ? f[0].name : `Выбрано файлов: ${f.length}`; dropZone.style.borderColor = '#7c3aed'; }
+    if (f.length) {
+        const dt = new DataTransfer();
+        Array.from(f).forEach(file => dt.items.add(file));
+        fileInput.files = dt.files;
+        setFiles(f);
+    }
 });
 document.getElementById('uploadForm').addEventListener('submit', () => {
-    document.getElementById('submitBtn').disabled = true;
+    submitBtn.disabled = true;
     document.getElementById('progressBar').classList.remove('d-none');
 });
 </script>
