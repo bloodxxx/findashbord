@@ -1,5 +1,5 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}Журнал действий — ФинДашборд{% endblock %}
+{% block title %}Журнал действий — Финансовый помощник{% endblock %}
 {% block page_title %}Журнал действий{% endblock %}
 
 {% block content %}
@@ -17,7 +17,7 @@
             </div>
             <div class="col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm">Применить</button>
-                <a href="{% url 'dashboard:audit' %}" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+                <a href="{% url 'finassist:audit' %}" class="btn btn-sm btn-outline-secondary">Сбросить</a>
             </div>
         </form>
     </div>

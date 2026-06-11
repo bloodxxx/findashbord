@@ -23,8 +23,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
+from django.db import models as django_models
 
-from .models import Document, FinancialRecord, AnalysisResult, Metric, AuditLog, PanelSettings
+from .models import Document, FinancialRecord, AnalysisResult, Metric, AuditLog, PanelSettings, Entity
 from .parsers import parse_document, detect_doc_type
 from .analyzers import analyze_document
 
@@ -47,7 +48,7 @@ def notify(user, subject, body):
             pass
 
 
-def process_upload(request, file, doc_type, period):
+def process_upload(request, file, doc_type, period, entity=None):
     # обработка одного файла: валидация, парсинг, анализ; возвращает (document, error)
     ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
     if ext not in ALLOWED_EXTENSIONS:
@@ -60,6 +61,7 @@ def process_upload(request, file, doc_type, period):
     document = Document.objects.create(
         user=request.user, file=file, file_name=file.name,
         doc_type=doc_type, period=period, status=Document.STATUS_VALIDATING,
+        entity=entity,
     )
     try:
         document.file.seek(0)
@@ -101,14 +103,14 @@ def process_upload(request, file, doc_type, period):
 def login_view(request):
     # авторизация пользователя
     if request.user.is_authenticated:
-        return redirect('dashboard:upload')
+        return redirect('finassist:upload')
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         user = authenticate(request, username=username, password=password)
         if user:
             login(request, user)
-            return redirect('dashboard:upload')
+            return redirect('finassist:upload')
         messages.error(request, 'Неверный логин или пароль')
     return render(request, 'dashboard/login.html')
 
@@ -116,7 +118,7 @@ def login_view(request):
 def register_view(request):
     # регистрация нового пользователя
     if request.user.is_authenticated:
-        return redirect('dashboard:upload')
+        return redirect('finassist:upload')
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
@@ -133,14 +135,14 @@ def register_view(request):
         else:
             User.objects.create_user(username=username, password=password, email=email)
             messages.success(request, 'Аккаунт создан. Войдите в систему.')
-            return redirect('dashboard:login')
+            return redirect('finassist:login')
     return render(request, 'dashboard/register.html')
 
 
 def logout_view(request):
     # выход из системы
     logout(request)
-    return redirect('dashboard:login')
+    return redirect('finassist:login')
 
 
 @login_required
@@ -150,18 +152,26 @@ def upload_view(request):
         files = request.FILES.getlist('file')
         doc_type = request.POST.get('doc_type', '')
         period = request.POST.get('period', '')
+        entity_id = request.POST.get('entity_id', '')
+        new_entity_name = request.POST.get('new_entity_name', '').strip()
+
+        entity = None
+        if new_entity_name:
+            entity = Entity.objects.create(name=new_entity_name)
+        elif entity_id:
+            entity = Entity.objects.filter(pk=entity_id).first()
 
         if not files:
             messages.error(request, 'Выберите файл')
-            return redirect('dashboard:upload')
+            return redirect('finassist:upload')
 
         if not doc_type or doc_type not in dict(Document.DOCUMENT_TYPES):
             messages.error(request, 'Выберите тип документа')
-            return redirect('dashboard:upload')
+            return redirect('finassist:upload')
 
         results = []
         for f in files:
-            doc, err = process_upload(request, f, doc_type, period)
+            doc, err = process_upload(request, f, doc_type, period, entity=entity)
             results.append((doc, err))
             if err:
                 messages.error(request, f'Ошибка: {err}')
@@ -169,16 +179,18 @@ def upload_view(request):
         ok = [d for d, e in results if e is None and d]
         if len(ok) == 1 and len(results) == 1:
             messages.success(request, f'Документ «{ok[0].file_name}» успешно проанализирован')
-            return redirect('dashboard:document_detail', pk=ok[0].pk)
+            return redirect('finassist:document_detail', pk=ok[0].pk)
         if ok:
             messages.success(request, f'Успешно обработано документов: {len(ok)} из {len(results)}')
-            return redirect('dashboard:history')
-        return redirect('dashboard:upload')
+            return redirect('finassist:history')
+        return redirect('finassist:upload')
 
     recent_docs = Document.objects.filter(user=request.user)[:5]
+    entities = Entity.objects.order_by('name')
     return render(request, 'dashboard/upload.html', {
         'document_types': Document.DOCUMENT_TYPES,
         'recent_docs': recent_docs,
+        'entities': entities,
     })
 
 
@@ -247,7 +259,7 @@ def delete_document(request, pk):
         document.delete()
         log_action(request.user, AuditLog.ACTION_DELETE, f'Удалён «{name}»')
         messages.success(request, 'Документ удалён')
-    return redirect('dashboard:history')
+    return redirect('finassist:history')
 
 
 @login_required
@@ -463,13 +475,13 @@ def export_pdf(request, pk):
     )
 
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('title', fontName='DejaVu-Bold', fontSize=14, alignment=1, spaceAfter=4)
-    sub_style = ParagraphStyle('sub', fontName='DejaVu', fontSize=9, alignment=1, textColor=colors.HexColor('#6B7280'), spaceAfter=14)
-    cell_style = ParagraphStyle('cell', fontName='DejaVu', fontSize=8)
+    title_style = ParagraphStyle('title', fontName='DejaVu-Bold', fontSize=16, alignment=1, spaceAfter=6)
+    sub_style = ParagraphStyle('sub', fontName='DejaVu', fontSize=10, alignment=1, textColor=colors.HexColor('#6B7280'), spaceAfter=16)
+    cell_style = ParagraphStyle('cell', fontName='DejaVu', fontSize=9)
 
     elements = []
 
-    elements.append(Paragraph(f"Отчёт: {document.file_name}", title_style))
+    elements.append(Paragraph(f"Название файла: {document.file_name}", title_style))
     elements.append(Paragraph(
         f"{document.get_doc_type_display()} · {document.period or ''} · {document.uploaded_at.strftime('%d.%m.%Y')}",
         sub_style
@@ -498,14 +510,14 @@ def export_pdf(request, pk):
             widths = [page_width / len(headers)] * len(headers)
 
         # стили параграфов для ячеек данных
-        p_left   = ParagraphStyle('pl', fontName='DejaVu', fontSize=8,
-                                  alignment=0, leading=10, wordWrap='LTR')
-        p_center = ParagraphStyle('pc', fontName='DejaVu', fontSize=8,
-                                  alignment=1, leading=10, wordWrap='LTR')
-        p_right  = ParagraphStyle('pr', fontName='DejaVu', fontSize=8,
-                                  alignment=2, leading=10, wordWrap='LTR')
-        h_style  = ParagraphStyle('h',  fontName='DejaVu-Bold', fontSize=8,
-                                  textColor=colors.white, alignment=1, leading=10)
+        p_left   = ParagraphStyle('pl', fontName='DejaVu', fontSize=9,
+                                  alignment=0, leading=12, wordWrap='LTR')
+        p_center = ParagraphStyle('pc', fontName='DejaVu', fontSize=9,
+                                  alignment=1, leading=12, wordWrap='LTR')
+        p_right  = ParagraphStyle('pr', fontName='DejaVu', fontSize=9,
+                                  alignment=2, leading=12, wordWrap='LTR')
+        h_style  = ParagraphStyle('h',  fontName='DejaVu-Bold', fontSize=9,
+                                  textColor=colors.white, alignment=1, leading=12)
 
         def cell_style(col_idx):
             if col_idx in text_cols:
@@ -645,7 +657,7 @@ def formats_view(request):
 @login_required
 @require_POST
 def export_visual(request, pk):
-    # экспорт построенных графиков дашборда в PDF (изображения приходят с клиента)
+    # экспорт построенных графиков результата в PDF (изображения приходят с клиента)
     document = get_object_or_404(Document, pk=pk, user=request.user)
     log_action(request.user, AuditLog.ACTION_EXPORT, f'Экспорт визуализаций «{document.file_name}»')
 
@@ -668,7 +680,7 @@ def export_visual(request, pk):
     sub_style = ParagraphStyle('sub', fontName='DejaVu', fontSize=9, alignment=1,
                                textColor=colors.HexColor('#6B7280'), spaceAfter=14)
     elements = [
-        Paragraph(f"Дашборд: {document.file_name}", title_style),
+        Paragraph(f"Название файла: {document.file_name}", title_style),
         Paragraph(f"{document.get_doc_type_display()} · {document.period or ''} · "
                   f"{document.uploaded_at.strftime('%d.%m.%Y')}", sub_style),
     ]
@@ -742,3 +754,71 @@ def save_panels(request, pk):
     ps.config = config
     ps.save()
     return JsonResponse({'ok': True})
+
+
+@login_required
+def db_schema_view(request):
+    from django.db import connection
+    tables = []
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'finassist_%' ORDER BY name")
+        tbl_names = [r[0] for r in cursor.fetchall()]
+        for tbl in tbl_names:
+            cursor.execute(f"PRAGMA table_info({tbl})")
+            cols = cursor.fetchall()
+            cursor.execute(f"SELECT COUNT(*) FROM {tbl}")
+            count = cursor.fetchone()[0]
+            tables.append({'name': tbl, 'cols': cols, 'count': count})
+    return render(request, 'dashboard/db_schema.html', {'tables': tables})
+
+
+@login_required
+def entities_view(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        if name:
+            Entity.objects.create(name=name, description=description)
+            messages.success(request, f'Организация «{name}» добавлена')
+        return redirect('finassist:entities')
+    entities = Entity.objects.annotate(
+        doc_count=django_models.Count('documents')
+    ).order_by('name')
+    return render(request, 'dashboard/entities.html', {'entities': entities})
+
+
+@login_required
+def entity_delete(request, pk):
+    entity = get_object_or_404(Entity, pk=pk)
+    if request.method == 'POST':
+        name = entity.name
+        entity.delete()
+        messages.success(request, f'Организация «{name}» удалена')
+    return redirect('finassist:entities')
+
+
+@login_required
+def compare_view(request):
+    doc1_id = request.GET.get('doc1')
+    doc2_id = request.GET.get('doc2')
+    doc1 = doc2 = analysis1 = analysis2 = None
+    if doc1_id:
+        doc1 = Document.objects.filter(pk=doc1_id, user=request.user, status='done').first()
+        analysis1 = getattr(doc1, 'analysis', None) if doc1 else None
+    if doc2_id:
+        doc2 = Document.objects.filter(pk=doc2_id, user=request.user, status='done').first()
+        analysis2 = getattr(doc2, 'analysis', None) if doc2 else None
+
+    all_docs = Document.objects.filter(user=request.user, status='done').order_by('-uploaded_at')
+    return render(request, 'dashboard/compare.html', {
+        'doc1': doc1, 'doc2': doc2,
+        'analysis1': analysis1, 'analysis2': analysis2,
+        'all_docs': all_docs,
+    })
+
+
+@login_required
+def entity_detail(request, pk):
+    entity = get_object_or_404(Entity, pk=pk)
+    docs = Document.objects.filter(entity=entity, user=request.user).order_by('-uploaded_at')
+    return render(request, 'dashboard/entity_detail.html', {'entity': entity, 'docs': docs})

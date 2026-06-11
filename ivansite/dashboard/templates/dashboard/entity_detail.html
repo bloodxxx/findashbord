@@ -1,0 +1,56 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}{{ entity.name }} — Финансовый помощник{% endblock %}
+{% block page_title %}{{ entity.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+    <a href="{% url 'finassist:entities' %}" class="btn btn-sm btn-outline-secondary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.3rem;"><polyline points="15 18 9 12 15 6"/></svg>
+        Организации
+    </a>
+    {% if entity.description %}
+    <span style="font-size:.82rem;color:#9ca3af;">{{ entity.description }}</span>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Документы организации ({{ docs|length }})
+    </div>
+    <div class="card-body p-0">
+        {% if docs %}
+        <table class="table mb-0">
+            <thead><tr>
+                <th class="ps-4">Файл</th>
+                <th>Тип</th>
+                <th>Период</th>
+                <th>Дата загрузки</th>
+                <th class="pe-4 text-end">Статус</th>
+            </tr></thead>
+            <tbody>
+                {% for doc in docs %}
+                <tr>
+                    <td class="ps-4 fw-semibold" style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        {% if doc.status == 'done' %}
+                        <a href="{% url 'finassist:document_detail' doc.pk %}" style="color:#7c3aed;text-decoration:none;">{{ doc.file_name }}</a>
+                        {% else %}
+                        {{ doc.file_name }}
+                        {% endif %}
+                    </td>
+                    <td style="font-size:.82rem;color:#6b7280;">{{ doc.get_doc_type_display }}</td>
+                    <td style="font-size:.82rem;color:#6b7280;">{{ doc.period|default:"—" }}</td>
+                    <td style="font-size:.82rem;color:#6b7280;">{{ doc.uploaded_at|date:"d.m.Y H:i" }}</td>
+                    <td class="pe-4 text-end"><span class="sbadge sbadge-{{ doc.status }}">{{ doc.get_status_display }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="padding:3rem;text-align:center;color:#9ca3af;font-size:.875rem;">
+            Нет документов для этой организации
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

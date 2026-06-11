@@ -1,5 +1,5 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}Регистрация — ФинДашборд{% endblock %}
+{% block title %}Регистрация — Финансовый помощник{% endblock %}
 
 {% block auth_content %}
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f6fb;padding:2rem;">
@@ -57,7 +57,7 @@
             </form>
         </div>
         <p style="text-align:center;margin-top:1.1rem;font-size:.85rem;color:#6b7280;">
-            Уже есть аккаунт? <a href="{% url 'dashboard:login' %}" style="color:#7c3aed;font-weight:600;text-decoration:none;">Войти</a>
+            Уже есть аккаунт? <a href="{% url 'finassist:login' %}" style="color:#7c3aed;font-weight:600;text-decoration:none;">Войти</a>
         </p>
     </div>
 </div>

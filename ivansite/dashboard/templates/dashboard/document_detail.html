@@ -1,5 +1,5 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}{{ document.file_name }} — ФинДашборд{% endblock %}
+{% block title %}{{ document.file_name }} — Финансовый помощник{% endblock %}
 {% block page_title %}{{ document.file_name }}{% endblock %}
 
 {% block content %}
@@ -24,32 +24,32 @@
                 <li>
                     <a class="dropdown-item" href="#" onclick="exportVisual(event)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.4rem;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-                        Дашборд с графиками (PDF)
+                        Результат с графиками (PDF)
                     </a>
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a class="dropdown-item" href="{% url 'dashboard:export_excel' document.pk %}">
+                    <a class="dropdown-item" href="{% url 'finassist:export_excel' document.pk %}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.4rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                         Excel (.xlsx)
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="{% url 'dashboard:export_pdf' document.pk %}">
+                    <a class="dropdown-item" href="{% url 'finassist:export_pdf' document.pk %}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.4rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                         PDF
                     </a>
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a class="dropdown-item" href="{% url 'dashboard:export_csv' document.pk %}">
+                    <a class="dropdown-item" href="{% url 'finassist:export_csv' document.pk %}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.4rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                         CSV
                     </a>
                 </li>
             </ul>
         </div>
-        <a href="{% url 'dashboard:history' %}" class="btn btn-sm btn-outline-secondary">
+        <a href="{% url 'finassist:history' %}" class="btn btn-sm btn-outline-secondary">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.3rem;"><polyline points="15 18 9 12 15 6"/></svg>
             Назад
         </a>
@@ -292,8 +292,8 @@
 let D = {{ chart_data_json|safe }};
 const PANEL_CFG = {{ panel_config_json|safe }};
 const DOC_TYPE = '{{ document.doc_type }}';
-const PANELS_URL = '{% url 'dashboard:save_panels' document.pk %}';
-const API_URL = '{% url 'dashboard:api_document' document.pk %}';
+const PANELS_URL = '{% url 'finassist:save_panels' document.pk %}';
+const API_URL = '{% url 'finassist:api_document' document.pk %}';
 const CSRF = '{{ csrf_token }}';
 const COLORS = ['#7c3aed','#2563eb','#0891b2','#059669','#d97706','#dc2626','#db2777','#7c3aed'];
 const charts = {};
@@ -452,14 +452,14 @@ function setupAutoRefresh() {
 async function exportVisual(ev) {
     ev.preventDefault();
     const images = Object.values(charts).filter(Boolean).map(c => c.toBase64Image());
-    const r = await fetch('{% url 'dashboard:export_visual' document.pk %}', {
+    const r = await fetch('{% url 'finassist:export_visual' document.pk %}', {
         method:'POST', headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},
         body:JSON.stringify({images})
     });
     const blob = await r.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'dashboard_{{ document.pk }}.pdf';
+    a.download = 'result_{{ document.pk }}.pdf';
     a.click();
 }
 

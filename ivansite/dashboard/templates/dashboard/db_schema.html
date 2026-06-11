@@ -1,0 +1,75 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}База данных — Финансовый помощник{% endblock %}
+{% block page_title %}Структура базы данных{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-header">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+    Финансовый помощник — таблицы БД
+  </div>
+  <div class="card-body px-4 py-3" style="font-size:.85rem;color:#374151;line-height:1.7;">
+    <p>Система использует <strong>SQLite</strong> — встроенную реляционную базу данных. Ниже показаны все таблицы приложения с описанием полей и количеством записей.</p>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem;">
+      <span style="background:#ede9fe;color:#7c3aed;border-radius:6px;padding:.2rem .6rem;font-size:.78rem;font-weight:600;">Django ORM</span>
+      <span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:.2rem .6rem;font-size:.78rem;font-weight:600;">SQLite 3</span>
+      <span style="background:#dbeafe;color:#1e40af;border-radius:6px;padding:.2rem .6rem;font-size:.78rem;font-weight:600;">Python 3.13</span>
+    </div>
+  </div>
+</div>
+
+{% for table in tables %}
+<div class="card mb-3">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <div style="display:flex;align-items:center;gap:.6rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+      <code style="font-size:.9rem;font-weight:700;color:#7c3aed;">{{ table.name }}</code>
+    </div>
+    <span style="font-size:.78rem;color:#9ca3af;font-weight:500;">{{ table.count }} записей</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0" style="font-size:.8rem;">
+        <thead>
+          <tr>
+            <th class="ps-4" style="width:40px;">#</th>
+            <th>Поле</th>
+            <th>Тип</th>
+            <th>Не NULL</th>
+            <th>По умолчанию</th>
+            <th class="pe-4">PK</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for col in table.cols %}
+          <tr>
+            <td class="ps-4" style="color:#9ca3af;">{{ col.0 }}</td>
+            <td><strong>{{ col.1 }}</strong></td>
+            <td><code style="font-size:.75rem;color:#7c3aed;">{{ col.2 }}</code></td>
+            <td>{% if col.3 %}<span style="color:#059669;">✓</span>{% else %}<span style="color:#9ca3af;">—</span>{% endif %}</td>
+            <td style="color:#6b7280;">{{ col.4|default:"—" }}</td>
+            <td class="pe-4">{% if col.5 %}<span style="background:#ede9fe;color:#7c3aed;border-radius:4px;padding:.1rem .4rem;font-size:.72rem;font-weight:700;">PK</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<div class="card mt-2">
+  <div class="card-header">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Связи между таблицами
+  </div>
+  <div class="card-body px-4 py-3" style="font-size:.82rem;color:#374151;line-height:1.8;">
+    <p><code style="color:#7c3aed;">finassist_entity</code> — основная сущность (организация). Один ко многим с документами.</p>
+    <p><code style="color:#7c3aed;">finassist_document</code> → <code style="color:#7c3aed;">finassist_entity</code> (FK entity_id, nullable), → auth_user (FK user_id)</p>
+    <p><code style="color:#7c3aed;">finassist_financialrecord</code> → <code style="color:#7c3aed;">finassist_document</code> (FK document_id) — строки из загруженного файла</p>
+    <p><code style="color:#7c3aed;">finassist_analysisresult</code> → <code style="color:#7c3aed;">finassist_document</code> (OneToOne) — итоги анализа</p>
+    <p><code style="color:#7c3aed;">finassist_metric</code> → <code style="color:#7c3aed;">finassist_document</code> (FK) — KPI-метрики</p>
+    <p><code style="color:#7c3aed;">finassist_auditlog</code> → auth_user — журнал действий пользователей</p>
+  </div>
+</div>
+{% endblock %}

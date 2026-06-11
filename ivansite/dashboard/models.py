@@ -2,6 +2,20 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class Entity(models.Model):
+    name = models.CharField(max_length=255, verbose_name='Название организации')
+    description = models.TextField(blank=True, verbose_name='Описание')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'finassist_entity'
+        verbose_name = 'Организация'
+        verbose_name_plural = 'Организации'
+
+    def __str__(self):
+        return self.name
+
+
 class Document(models.Model):
     TYPE_INCOME_EXPENSE = 'income_expense'
     TYPE_CASH_FLOW = 'cash_flow'
@@ -30,6 +44,7 @@ class Document(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='documents')
+    entity = models.ForeignKey(Entity, on_delete=models.SET_NULL, null=True, blank=True, related_name='documents', verbose_name='Организация')
     file = models.FileField(upload_to='uploads/')
     file_name = models.CharField(max_length=255)
     doc_type = models.CharField(max_length=30, choices=DOCUMENT_TYPES)
@@ -42,6 +57,7 @@ class Document(models.Model):
 
     class Meta:
         ordering = ['-uploaded_at']
+        db_table = 'finassist_document'
 
     def __str__(self):
         return f"{self.file_name} ({self.get_doc_type_display()})"
@@ -61,6 +77,9 @@ class FinancialRecord(models.Model):
     period = models.CharField(max_length=100, blank=True)
     extra = models.JSONField(default=dict, blank=True)
 
+    class Meta:
+        db_table = 'finassist_financialrecord'
+
     def __str__(self):
         return f"{self.document} | {self.date} | {self.amount}"
 
@@ -77,6 +96,9 @@ class AnalysisResult(models.Model):
     chart_data = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        db_table = 'finassist_analysisresult'
+
     def __str__(self):
         return f"Analysis: {self.document}"
 
@@ -85,6 +107,9 @@ class Metric(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='metrics')
     metric_name = models.CharField(max_length=255)
     value = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = 'finassist_metric'
 
     def __str__(self):
         return f"{self.metric_name}: {self.value}"
@@ -109,6 +134,7 @@ class AuditLog(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        db_table = 'finassist_auditlog'
 
     def __str__(self):
         return f"{self.user} · {self.get_action_display()} · {self.created_at}"
@@ -118,6 +144,9 @@ class PanelSettings(models.Model):
     # настройки панелей мониторинга пользователя (какие графики показывать, порядок)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='panel_settings')
     config = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'finassist_panelsettings'
 
     def __str__(self):
         return f"Panels: {self.user}"

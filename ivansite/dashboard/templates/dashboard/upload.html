@@ -1,5 +1,5 @@
 {% extends 'dashboard/base.html' %}
-{% block title %}Загрузка — ФинДашборд{% endblock %}
+{% block title %}Загрузка — Финансовый помощник{% endblock %}
 {% block page_title %}Загрузка документа{% endblock %}
 
 {% block content %}
@@ -22,6 +22,18 @@
                         <div class="text-muted mt-1" style="font-size:.78rem;">Можно выбрать несколько файлов · Excel (.xlsx, .xls) &nbsp;·&nbsp; CSV (.csv) &nbsp;·&nbsp; XML (.xml) &nbsp;·&nbsp; до 20 МБ</div>
                     </div>
                     <input type="file" name="file" id="fileInput" accept=".xlsx,.xls,.csv,.xml" class="d-none" multiple required>
+
+                    <div class="mb-3">
+                        <label class="form-label">Организация <span style="color:#9ca3af;font-weight:400;">(необязательно)</span></label>
+                        <select name="entity_id" id="entitySelect" class="form-select">
+                            <option value="">— Не указана —</option>
+                            {% for e in entities %}
+                            <option value="{{ e.pk }}">{{ e.name }}</option>
+                            {% endfor %}
+                            <option value="_new">+ Добавить новую организацию...</option>
+                        </select>
+                        <input type="text" name="new_entity_name" id="newEntityName" class="form-control mt-2" placeholder="Название новой организации" style="display:none;">
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label">Тип документа <span class="text-danger">*</span></label>
@@ -66,13 +78,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                     <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Валидация</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Парсинг</span>
+                    <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Обработка</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                     <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Нормализация</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                     <span style="background:#f3f4f6;color:#374151;border-radius:6px;padding:.2rem .55rem;font-weight:500;">Анализ</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    <span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:.2rem .55rem;font-weight:600;">Дашборд</span>
+                    <span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:.2rem .55rem;font-weight:600;">Результат</span>
                 </div>
             </div>
         </div>
@@ -97,7 +109,7 @@
                         <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
                             <span class="sbadge sbadge-{{ doc.status }}">{{ doc.get_status_display }}</span>
                             {% if doc.status == 'done' %}
-                            <a href="{% url 'dashboard:document_detail' doc.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2">
+                            <a href="{% url 'finassist:document_detail' doc.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                             </a>
                             {% endif %}
@@ -114,7 +126,7 @@
             </div>
             {% if recent_docs %}
             <div class="card-footer" style="background:transparent;border-top:1px solid #f3f4f6;text-align:center;padding:.75rem;">
-                <a href="{% url 'dashboard:history' %}" style="font-size:.82rem;color:#7c3aed;font-weight:600;text-decoration:none;">Смотреть всю историю →</a>
+                <a href="{% url 'finassist:history' %}" style="font-size:.82rem;color:#7c3aed;font-weight:600;text-decoration:none;">Смотреть всю историю →</a>
             </div>
             {% endif %}
         </div>
@@ -124,11 +136,15 @@
 
 {% block extra_js %}
 <script>
+document.getElementById('entitySelect').addEventListener('change', function() {
+    document.getElementById('newEntityName').style.display = this.value === '_new' ? '' : 'none';
+    if (this.value !== '_new') document.getElementById('newEntityName').value = '';
+});
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const dropText = document.getElementById('dropText');
 
-const DETECT_URL = '{% url 'dashboard:detect_type' %}';
+const DETECT_URL = '{% url 'finassist:detect_type' %}';
 const CSRF = '{{ csrf_token }}';
 const DOC_TYPE_LABELS = {
     {% for val, label in document_types %}'{{ val }}': '{{ label }}',{% endfor %}

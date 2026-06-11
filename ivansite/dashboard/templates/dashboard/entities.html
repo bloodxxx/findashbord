@@ -1,0 +1,67 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Организации — Финансовый помощник{% endblock %}
+{% block page_title %}Организации{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Добавить организацию
+      </div>
+      <div class="card-body p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Название <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" placeholder="ООО Ромашка" required>
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Описание <span style="color:#9ca3af;font-weight:400;">(необязательно)</span></label>
+            <textarea name="description" class="form-control" rows="2" placeholder="Краткое описание организации"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Добавить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Список организаций ({{ entities|length }})
+      </div>
+      <div class="card-body p-0">
+        {% if entities %}
+        <table class="table mb-0">
+          <thead><tr><th class="ps-4">Название</th><th>Описание</th><th class="text-center">Документов</th><th class="pe-4 text-end">Действия</th></tr></thead>
+          <tbody>
+            {% for entity in entities %}
+            <tr>
+              <td class="ps-4 fw-semibold"><a href="{% url 'finassist:entity_detail' entity.pk %}" style="color:#7c3aed;text-decoration:none;">{{ entity.name }}</a></td>
+              <td style="color:#6b7280;font-size:.82rem;">{{ entity.description|default:"—"|truncatechars:60 }}</td>
+              <td class="text-center">
+                <span style="background:#ede9fe;color:#7c3aed;border-radius:999px;padding:.15rem .6rem;font-size:.78rem;font-weight:600;">{{ entity.doc_count }}</span>
+              </td>
+              <td class="pe-4 text-end">
+                <form method="post" action="{% url 'finassist:entity_delete' entity.pk %}" style="display:inline;" onsubmit="return confirm('Удалить организацию «{{ entity.name }}»?')">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">Удалить</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div style="padding:3rem;text-align:center;color:#9ca3af;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto .75rem;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <div style="font-size:.875rem;">Нет организаций. Добавьте первую.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

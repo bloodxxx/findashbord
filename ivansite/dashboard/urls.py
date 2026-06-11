@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 
-app_name = 'dashboard'
+app_name = 'finassist'
 
 urlpatterns = [
     path('', views.upload_view, name='upload'),
@@ -20,4 +20,10 @@ urlpatterns = [
     path('document/<int:pk>/panels/', views.save_panels, name='save_panels'),
     path('formats/', views.formats_view, name='formats'),
     path('detect/', views.detect_type, name='detect_type'),
+    path('db/', views.db_schema_view, name='db_schema'),
+    path('entities/', views.entities_view, name='entities'),
+    path('entities/<int:pk>/', views.entity_detail, name='entity_detail'),
+    path('entities/<int:pk>/delete/', views.entity_delete, name='entity_delete'),
+    path('compare/', views.compare_view, name='compare'),
 ]
+

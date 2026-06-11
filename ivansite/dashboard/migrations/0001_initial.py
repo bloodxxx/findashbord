@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                 ('net_flow', models.DecimalField(decimal_places=2, default=0, max_digits=18)),
                 ('chart_data', models.JSONField(blank=True, default=dict)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('document', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='analysis', to='dashboard.document')),
+                ('document', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='analysis', to='finassist.document')),
             ],
         ),
         migrations.CreateModel(
@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
                 ('fact_value', models.DecimalField(blank=True, decimal_places=2, max_digits=18, null=True)),
                 ('period', models.CharField(blank=True, max_length=100)),
                 ('extra', models.JSONField(blank=True, default=dict)),
-                ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='records', to='dashboard.document')),
+                ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='records', to='finassist.document')),
             ],
         ),
         migrations.CreateModel(
@@ -71,7 +71,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('metric_name', models.CharField(max_length=255)),
                 ('value', models.DecimalField(decimal_places=2, default=0, max_digits=18)),
-                ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='metrics', to='dashboard.document')),
+                ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='metrics', to='finassist.document')),
             ],
         ),
     ]
