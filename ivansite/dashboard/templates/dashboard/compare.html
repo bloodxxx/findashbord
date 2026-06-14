@@ -4,133 +4,246 @@
 
 {% block content %}
 
+<!-- Фильтр формы -->
 <div class="card mb-4">
   <div class="card-body py-3 px-4">
-    <form method="get" class="row g-3 align-items-end">
-      <div class="col-md-5">
+    <form method="get" class="row g-3 align-items-end" id="compareForm">
+
+      <!-- Организация-фильтр -->
+      <div class="col-12 col-md-3">
+        <label class="form-label">Организация</label>
+        <select name="entity" class="form-select" id="entityFilter" onchange="this.form.submit()">
+          <option value="">— Все организации —</option>
+          {% for e in entities %}
+          <option value="{{ e.pk }}" {% if entity_filter and entity_filter.pk == e.pk %}selected{% endif %}>{{ e.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-md-4">
         <label class="form-label">Документ 1</label>
         <select name="doc1" class="form-select">
           <option value="">— Выберите документ —</option>
           {% for d in all_docs %}
-          <option value="{{ d.pk }}" {% if doc1 and doc1.pk == d.pk %}selected{% endif %}>{{ d.file_name }} ({{ d.get_doc_type_display }}) · {{ d.uploaded_at|date:"d.m.Y" }}</option>
+          <option value="{{ d.pk }}" {% if doc1 and doc1.pk == d.pk %}selected{% endif %}>
+            {{ d.file_name|truncatechars:35 }}{% if d.entity %} [{{ d.entity.name }}]{% endif %}
+          </option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-5">
+
+      <div class="col-12 col-md-4">
         <label class="form-label">Документ 2</label>
         <select name="doc2" class="form-select">
           <option value="">— Выберите документ —</option>
           {% for d in all_docs %}
-          <option value="{{ d.pk }}" {% if doc2 and doc2.pk == d.pk %}selected{% endif %}>{{ d.file_name }} ({{ d.get_doc_type_display }}) · {{ d.uploaded_at|date:"d.m.Y" }}</option>
+          <option value="{{ d.pk }}" {% if doc2 and doc2.pk == d.pk %}selected{% endif %}>
+            {{ d.file_name|truncatechars:35 }}{% if d.entity %} [{{ d.entity.name }}]{% endif %}
+          </option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-2">
-        <button type="submit" class="btn btn-primary w-100">Сравнить</button>
+
+      <div class="col-12 col-md-1">
+        <button type="submit" class="btn btn-primary w-100">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </button>
       </div>
+
     </form>
   </div>
 </div>
 
 {% if doc1 and doc2 %}
 
+<!-- Метаданные обоих документов -->
 <div class="row g-4 mb-4">
+  {% for doc, analysis, num in meta_pairs %}
   <div class="col-md-6">
-    <div class="card">
-      <div class="card-header"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>{{ doc1.file_name }}</div>
-      <div class="card-body">
-        <div style="font-size:.8rem;color:#6b7280;margin-bottom:.75rem;">{{ doc1.get_doc_type_display }} · {{ doc1.period|default:"Период не указан" }} · {{ doc1.uploaded_at|date:"d.m.Y" }}</div>
-        {% if analysis1 %}
-        <div class="row g-2">
-          {% if doc1.doc_type == 'income_expense' %}
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;">{{ analysis1.total_income|floatformat:0 }}</div><div class="kpi-lbl">Доходы</div></div></div>
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;">{{ analysis1.total_expense|floatformat:0 }}</div><div class="kpi-lbl">Расходы</div></div></div>
-          <div class="col-12"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;color:{% if analysis1.profit >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ analysis1.profit|floatformat:0 }}</div><div class="kpi-lbl">Прибыль</div></div></div>
-          {% elif doc1.doc_type == 'cash_flow' %}
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;">{{ analysis1.total_inflow|floatformat:0 }}</div><div class="kpi-lbl">Поступления</div></div></div>
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;">{{ analysis1.total_outflow|floatformat:0 }}</div><div class="kpi-lbl">Списания</div></div></div>
-          <div class="col-12"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;color:{% if analysis1.net_flow >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ analysis1.net_flow|floatformat:0 }}</div><div class="kpi-lbl">Чистый поток</div></div></div>
-          {% else %}
-          {% for m in doc1.metrics.all %}
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.1rem;">{{ m.value|floatformat:0 }}</div><div class="kpi-lbl">{{ m.metric_name }}</div></div></div>
-          {% endfor %}
-          {% endif %}
-        </div>
-        {% else %}
-        <div style="color:#9ca3af;font-size:.85rem;">Нет данных анализа</div>
-        {% endif %}
+    <div class="card h-100">
+      <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Документ {{ num }}: {{ doc.file_name|truncatechars:40 }}
       </div>
-    </div>
-  </div>
+      <div class="card-body">
 
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>{{ doc2.file_name }}</div>
-      <div class="card-body">
-        <div style="font-size:.8rem;color:#6b7280;margin-bottom:.75rem;">{{ doc2.get_doc_type_display }} · {{ doc2.period|default:"Период не указан" }} · {{ doc2.uploaded_at|date:"d.m.Y" }}</div>
-        {% if analysis2 %}
+        <!-- Метаданные -->
+        <table class="table table-sm mb-3" style="font-size:.82rem;">
+          <tbody>
+            <tr>
+              <td style="color:#6b7280;width:42%;">Тип</td>
+              <td class="fw-semibold">{{ doc.get_doc_type_display }}</td>
+            </tr>
+            <tr>
+              <td style="color:#6b7280;">Период</td>
+              <td class="fw-semibold">{{ doc.period|default:"—" }}</td>
+            </tr>
+            {% if doc.period_start or doc.period_end %}
+            <tr>
+              <td style="color:#6b7280;">Даты периода</td>
+              <td class="fw-semibold">
+                {{ doc.period_start|date:"d.m.Y"|default:"?" }} — {{ doc.period_end|date:"d.m.Y"|default:"?" }}
+              </td>
+            </tr>
+            {% endif %}
+            <tr>
+              <td style="color:#6b7280;">Дата загрузки</td>
+              <td class="fw-semibold">{{ doc.uploaded_at|date:"d.m.Y H:i" }}</td>
+            </tr>
+            <tr>
+              <td style="color:#6b7280;">Организация</td>
+              <td class="fw-semibold">
+                {% if doc.entity %}<a href="{% url 'finassist:entity_detail' doc.entity.pk %}" style="color:#7c3aed;text-decoration:none;">{{ doc.entity.name }}</a>{% else %}<span style="color:#9ca3af;">—</span>{% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td style="color:#6b7280;">Статус</td>
+              <td><span class="sbadge sbadge-{{ doc.status }}">{{ doc.get_status_display }}</span></td>
+            </tr>
+            {% if analysis %}
+            <tr>
+              <td style="color:#6b7280;">Дата анализа</td>
+              <td class="fw-semibold">{{ analysis.created_at|date:"d.m.Y H:i" }}</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+
+        <!-- KPI -->
+        {% if analysis %}
         <div class="row g-2">
-          {% if doc2.doc_type == 'income_expense' %}
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;">{{ analysis2.total_income|floatformat:0 }}</div><div class="kpi-lbl">Доходы</div></div></div>
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;">{{ analysis2.total_expense|floatformat:0 }}</div><div class="kpi-lbl">Расходы</div></div></div>
-          <div class="col-12"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;color:{% if analysis2.profit >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ analysis2.profit|floatformat:0 }}</div><div class="kpi-lbl">Прибыль</div></div></div>
-          {% elif doc2.doc_type == 'cash_flow' %}
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;">{{ analysis2.total_inflow|floatformat:0 }}</div><div class="kpi-lbl">Поступления</div></div></div>
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;">{{ analysis2.total_outflow|floatformat:0 }}</div><div class="kpi-lbl">Списания</div></div></div>
-          <div class="col-12"><div class="kpi-box"><div class="kpi-val" style="font-size:1.2rem;color:{% if analysis2.net_flow >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ analysis2.net_flow|floatformat:0 }}</div><div class="kpi-lbl">Чистый поток</div></div></div>
+          {% if doc.doc_type == 'income_expense' %}
+          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.15rem;">{{ analysis.total_income|floatformat:0 }}</div><div class="kpi-lbl">Доходы</div></div></div>
+          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.15rem;">{{ analysis.total_expense|floatformat:0 }}</div><div class="kpi-lbl">Расходы</div></div></div>
+          <div class="col-12"><div class="kpi-box"><div class="kpi-val" style="font-size:1.15rem;color:{% if analysis.profit >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ analysis.profit|floatformat:0 }}</div><div class="kpi-lbl">Прибыль</div></div></div>
+          {% elif doc.doc_type == 'cash_flow' %}
+          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.15rem;">{{ analysis.total_inflow|floatformat:0 }}</div><div class="kpi-lbl">Поступления</div></div></div>
+          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.15rem;">{{ analysis.total_outflow|floatformat:0 }}</div><div class="kpi-lbl">Списания</div></div></div>
+          <div class="col-12"><div class="kpi-box"><div class="kpi-val" style="font-size:1.15rem;color:{% if analysis.net_flow >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ analysis.net_flow|floatformat:0 }}</div><div class="kpi-lbl">Чистый поток</div></div></div>
           {% else %}
-          {% for m in doc2.metrics.all %}
-          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.1rem;">{{ m.value|floatformat:0 }}</div><div class="kpi-lbl">{{ m.metric_name }}</div></div></div>
+          {% for m in doc.metrics.all %}
+          <div class="col-6"><div class="kpi-box"><div class="kpi-val" style="font-size:1.05rem;">{{ m.value|floatformat:0 }}</div><div class="kpi-lbl">{{ m.metric_name }}</div></div></div>
           {% endfor %}
           {% endif %}
         </div>
         {% else %}
-        <div style="color:#9ca3af;font-size:.85rem;">Нет данных анализа</div>
+        <div style="color:#9ca3af;font-size:.85rem;padding:.5rem 0;">Нет данных анализа</div>
         {% endif %}
+
       </div>
     </div>
   </div>
+  {% endfor %}
 </div>
 
+<!-- Сравнительная таблица показателей -->
 {% if analysis1 and analysis2 and doc1.doc_type == doc2.doc_type %}
-<div class="card">
+<div class="card mb-4">
   <div class="card-header">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     Сравнение показателей
   </div>
   <div class="card-body p-0">
     <table class="table mb-0">
-      <thead><tr><th class="ps-4">Показатель</th><th class="text-end">{{ doc1.file_name|truncatechars:30 }}</th><th class="text-end">{{ doc2.file_name|truncatechars:30 }}</th><th class="text-end pe-4">Изменение</th></tr></thead>
+      <thead>
+        <tr>
+          <th class="ps-4" style="width:30%;">Показатель</th>
+          <th class="text-end">Документ 1</th>
+          <th class="text-end">Документ 2</th>
+          <th class="text-end">Абс. изм.</th>
+          <th class="text-end pe-4">%</th>
+        </tr>
+      </thead>
       <tbody>
         {% if doc1.doc_type == 'income_expense' %}
-        <tr><td class="ps-4">Доходы</td><td class="text-end">{{ analysis1.total_income|floatformat:0 }}</td><td class="text-end">{{ analysis2.total_income|floatformat:0 }}</td>
-          <td class="text-end pe-4 fw-semibold" style="color:{% if analysis2.total_income >= analysis1.total_income %}#059669{% else %}#dc2626{% endif %};">
-            {% if analysis1.total_income %}{% widthratio analysis2.total_income analysis1.total_income 100 %}% от 1-го{% endif %}
-          </td></tr>
-        <tr><td class="ps-4">Расходы</td><td class="text-end">{{ analysis1.total_expense|floatformat:0 }}</td><td class="text-end">{{ analysis2.total_expense|floatformat:0 }}</td>
-          <td class="text-end pe-4 fw-semibold" style="color:{% if analysis2.total_expense <= analysis1.total_expense %}#059669{% else %}#dc2626{% endif %};">
-            {% if analysis1.total_expense %}{% widthratio analysis2.total_expense analysis1.total_expense 100 %}% от 1-го{% endif %}
-          </td></tr>
-        <tr><td class="ps-4">Прибыль</td><td class="text-end">{{ analysis1.profit|floatformat:0 }}</td><td class="text-end">{{ analysis2.profit|floatformat:0 }}</td>
-          <td class="text-end pe-4 fw-semibold" style="color:{% if analysis2.profit >= analysis1.profit %}#059669{% else %}#dc2626{% endif %};">
-            {% if analysis1.profit %}{% widthratio analysis2.profit analysis1.profit 100 %}% от 1-го{% endif %}
-          </td></tr>
+        {% with d=delta.total_income %}
+        <tr>
+          <td class="ps-4">Доходы</td>
+          <td class="text-end">{{ analysis1.total_income|floatformat:0 }}</td>
+          <td class="text-end">{{ analysis2.total_income|floatformat:0 }}</td>
+          <td class="text-end fw-semibold" style="color:{% if d.abs >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.abs >= 0 %}+{% endif %}{{ d.abs|floatformat:0 }}
+          </td>
+          <td class="text-end pe-4 fw-semibold" style="color:{% if d.abs >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.pct != None %}{% if d.pct >= 0 %}+{% endif %}{{ d.pct }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% with d=delta.total_expense %}
+        <tr>
+          <td class="ps-4">Расходы</td>
+          <td class="text-end">{{ analysis1.total_expense|floatformat:0 }}</td>
+          <td class="text-end">{{ analysis2.total_expense|floatformat:0 }}</td>
+          <td class="text-end fw-semibold" style="color:{% if d.abs <= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.abs >= 0 %}+{% endif %}{{ d.abs|floatformat:0 }}
+          </td>
+          <td class="text-end pe-4 fw-semibold" style="color:{% if d.abs <= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.pct != None %}{% if d.pct >= 0 %}+{% endif %}{{ d.pct }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% with d=delta.profit %}
+        <tr>
+          <td class="ps-4">Прибыль</td>
+          <td class="text-end">{{ analysis1.profit|floatformat:0 }}</td>
+          <td class="text-end">{{ analysis2.profit|floatformat:0 }}</td>
+          <td class="text-end fw-semibold" style="color:{% if d.abs >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.abs >= 0 %}+{% endif %}{{ d.abs|floatformat:0 }}
+          </td>
+          <td class="text-end pe-4 fw-semibold" style="color:{% if d.abs >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.pct != None %}{% if d.pct >= 0 %}+{% endif %}{{ d.pct }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
         {% elif doc1.doc_type == 'cash_flow' %}
-        <tr><td class="ps-4">Поступления</td><td class="text-end">{{ analysis1.total_inflow|floatformat:0 }}</td><td class="text-end">{{ analysis2.total_inflow|floatformat:0 }}</td>
-          <td class="text-end pe-4 fw-semibold">{% if analysis1.total_inflow %}{% widthratio analysis2.total_inflow analysis1.total_inflow 100 %}%{% endif %}</td></tr>
-        <tr><td class="ps-4">Списания</td><td class="text-end">{{ analysis1.total_outflow|floatformat:0 }}</td><td class="text-end">{{ analysis2.total_outflow|floatformat:0 }}</td>
-          <td class="text-end pe-4 fw-semibold">{% if analysis1.total_outflow %}{% widthratio analysis2.total_outflow analysis1.total_outflow 100 %}%{% endif %}</td></tr>
-        <tr><td class="ps-4">Чистый поток</td><td class="text-end">{{ analysis1.net_flow|floatformat:0 }}</td><td class="text-end">{{ analysis2.net_flow|floatformat:0 }}</td>
-          <td class="text-end pe-4 fw-semibold" style="color:{% if analysis2.net_flow >= analysis1.net_flow %}#059669{% else %}#dc2626{% endif %};">
-            {% if analysis1.net_flow %}{% widthratio analysis2.net_flow analysis1.net_flow 100 %}%{% endif %}
-          </td></tr>
+        {% with d=delta.total_inflow %}
+        <tr>
+          <td class="ps-4">Поступления</td>
+          <td class="text-end">{{ analysis1.total_inflow|floatformat:0 }}</td>
+          <td class="text-end">{{ analysis2.total_inflow|floatformat:0 }}</td>
+          <td class="text-end fw-semibold" style="color:{% if d.abs >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.abs >= 0 %}+{% endif %}{{ d.abs|floatformat:0 }}
+          </td>
+          <td class="text-end pe-4 fw-semibold" style="color:{% if d.abs >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.pct != None %}{% if d.pct >= 0 %}+{% endif %}{{ d.pct }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% with d=delta.total_outflow %}
+        <tr>
+          <td class="ps-4">Списания</td>
+          <td class="text-end">{{ analysis1.total_outflow|floatformat:0 }}</td>
+          <td class="text-end">{{ analysis2.total_outflow|floatformat:0 }}</td>
+          <td class="text-end fw-semibold" style="color:{% if d.abs <= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.abs >= 0 %}+{% endif %}{{ d.abs|floatformat:0 }}
+          </td>
+          <td class="text-end pe-4 fw-semibold" style="color:{% if d.abs <= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.pct != None %}{% if d.pct >= 0 %}+{% endif %}{{ d.pct }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% with d=delta.net_flow %}
+        <tr>
+          <td class="ps-4">Чистый поток</td>
+          <td class="text-end">{{ analysis1.net_flow|floatformat:0 }}</td>
+          <td class="text-end">{{ analysis2.net_flow|floatformat:0 }}</td>
+          <td class="text-end fw-semibold" style="color:{% if d.abs >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.abs >= 0 %}+{% endif %}{{ d.abs|floatformat:0 }}
+          </td>
+          <td class="text-end pe-4 fw-semibold" style="color:{% if d.abs >= 0 %}#059669{% else %}#dc2626{% endif %};">
+            {% if d.pct != None %}{% if d.pct >= 0 %}+{% endif %}{{ d.pct }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
         {% endif %}
       </tbody>
     </table>
   </div>
 </div>
 {% elif doc1 and doc2 and doc1.doc_type != doc2.doc_type %}
-<div class="alert alert-danger">Документы разных типов ({{ doc1.get_doc_type_display }} и {{ doc2.get_doc_type_display }}). Детальное сравнение возможно только для одинаковых типов.</div>
+<div class="alert alert-danger">
+  Документы разных типов ({{ doc1.get_doc_type_display }} и {{ doc2.get_doc_type_display }}). Детальное сравнение возможно только для одинаковых типов.
+</div>
 {% endif %}
 
 {% elif doc1 or doc2 %}
@@ -140,6 +253,7 @@
   <div class="card-body" style="text-align:center;padding:3rem;color:#9ca3af;">
     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto .75rem;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     <div style="font-size:.9rem;">Выберите два документа для сравнения показателей</div>
+    <div style="font-size:.78rem;margin-top:.5rem;">Для удобства можно фильтровать список по организации</div>
   </div>
 </div>
 {% endif %}

@@ -24,6 +24,7 @@ urlpatterns = [
     path('entities/', views.entities_view, name='entities'),
     path('entities/<int:pk>/', views.entity_detail, name='entity_detail'),
     path('entities/<int:pk>/delete/', views.entity_delete, name='entity_delete'),
+    path('entities/<int:pk>/report/', views.org_report_view, name='org_report'),
     path('compare/', views.compare_view, name='compare'),
 ]
 

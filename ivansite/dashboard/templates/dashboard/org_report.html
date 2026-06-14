@@ -1,0 +1,204 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Отчёт: {{ entity.name }} — Финансовый помощник{% endblock %}
+{% block page_title %}Отчёт организации{% endblock %}
+
+{% block extra_css %}
+<style>
+.report-section-label {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #9ca3af;
+  margin: 1.5rem 0 .6rem;
+}
+.delta-up   { color: #059669; font-weight: 600; }
+.delta-down { color: #dc2626; font-weight: 600; }
+.delta-neu  { color: #6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Шапка -->
+<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+  <a href="{% url 'finassist:entity_detail' entity.pk %}" class="btn btn-sm btn-outline-secondary">
+    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom;margin-right:.25rem;"><polyline points="15 18 9 12 15 6"/></svg>
+    Документы
+  </a>
+  <div>
+    <div style="font-size:1.1rem;font-weight:700;color:#1a1d27;">{{ entity.name }}</div>
+    {% if entity.description %}<div style="font-size:.8rem;color:#9ca3af;">{{ entity.description }}</div>{% endif %}
+  </div>
+  <div class="ms-auto" style="font-size:.78rem;color:#9ca3af;">
+    Документов в отчёте: {{ summary.doc_count }} · Проанализировано: {{ summary.done_count }}
+  </div>
+</div>
+
+<!-- Сводные KPI -->
+{% if summary.done_count %}
+<div class="report-section-label">Сводные показатели по всем документам</div>
+<div class="row g-3 mb-4">
+  {% if summary.total_income %}
+  <div class="col-6 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-val">{{ summary.total_income|floatformat:0 }}</div>
+      <div class="kpi-lbl">Суммарные доходы</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-val">{{ summary.total_expense|floatformat:0 }}</div>
+      <div class="kpi-lbl">Суммарные расходы</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-val" style="color:{% if summary.profit >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ summary.profit|floatformat:0 }}</div>
+      <div class="kpi-lbl">Суммарная прибыль</div>
+    </div>
+  </div>
+  {% endif %}
+  {% if summary.total_inflow %}
+  <div class="col-6 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-val">{{ summary.total_inflow|floatformat:0 }}</div>
+      <div class="kpi-lbl">Суммарные поступления</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-val">{{ summary.total_outflow|floatformat:0 }}</div>
+      <div class="kpi-lbl">Суммарные списания</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-val" style="color:{% if summary.net_flow >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ summary.net_flow|floatformat:0 }}</div>
+      <div class="kpi-lbl">Суммарный чистый поток</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- График динамики -->
+{% if chart_labels != '[]' %}
+<div class="report-section-label">Динамика по периодам</div>
+<div class="card mb-4">
+  <div class="card-body" style="padding:1.25rem;">
+    <canvas id="dynChart" height="90"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- Таблица документов -->
+<div class="report-section-label">Детализация по документам</div>
+<div class="card">
+  <div class="card-body p-0">
+    {% if doc_rows %}
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th class="ps-4">Файл</th>
+          <th>Тип</th>
+          <th>Период</th>
+          <th>Дата загрузки</th>
+          <th class="text-end">Доходы / Поступления</th>
+          <th class="text-end">Расходы / Списания</th>
+          <th class="text-end pe-4">Прибыль / Поток</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in doc_rows %}
+        {% with doc=row.doc analysis=row.analysis %}
+        <tr>
+          <td class="ps-4 fw-semibold" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <a href="{% url 'finassist:document_detail' doc.pk %}" style="color:#7c3aed;text-decoration:none;">{{ doc.file_name }}</a>
+          </td>
+          <td style="font-size:.82rem;color:#6b7280;">{{ doc.get_doc_type_display }}</td>
+          <td style="font-size:.82rem;color:#6b7280;">
+            {{ doc.period|default:"—" }}
+            {% if doc.period_start or doc.period_end %}
+            <div style="font-size:.72rem;color:#9ca3af;">{{ doc.period_start|date:"d.m.Y"|default:"?" }} — {{ doc.period_end|date:"d.m.Y"|default:"?" }}</div>
+            {% endif %}
+          </td>
+          <td style="font-size:.82rem;color:#6b7280;">{{ doc.uploaded_at|date:"d.m.Y H:i" }}</td>
+          {% if analysis %}
+            {% if doc.doc_type == 'income_expense' %}
+            <td class="text-end" style="font-size:.85rem;">{{ analysis.total_income|floatformat:0 }}</td>
+            <td class="text-end" style="font-size:.85rem;">{{ analysis.total_expense|floatformat:0 }}</td>
+            <td class="text-end pe-4 fw-semibold" style="color:{% if analysis.profit >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ analysis.profit|floatformat:0 }}</td>
+            {% elif doc.doc_type == 'cash_flow' %}
+            <td class="text-end" style="font-size:.85rem;">{{ analysis.total_inflow|floatformat:0 }}</td>
+            <td class="text-end" style="font-size:.85rem;">{{ analysis.total_outflow|floatformat:0 }}</td>
+            <td class="text-end pe-4 fw-semibold" style="color:{% if analysis.net_flow >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ analysis.net_flow|floatformat:0 }}</td>
+            {% else %}
+            <td class="text-end" colspan="3" style="font-size:.82rem;color:#9ca3af;">—</td>
+            {% endif %}
+          {% else %}
+          <td colspan="3" class="text-end pe-4" style="font-size:.82rem;color:#9ca3af;">нет данных</td>
+          {% endif %}
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="padding:3rem;text-align:center;color:#9ca3af;font-size:.875rem;">
+      Нет проанализированных документов для этой организации
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{% if chart_labels != '[]' %}
+<script>
+(function(){
+  const labels   = {{ chart_labels|safe }};
+  const income   = {{ chart_income|safe }};
+  const expense  = {{ chart_expense|safe }};
+  const inflow   = {{ chart_inflow|safe }};
+  const outflow  = {{ chart_outflow|safe }};
+
+  const datasets = [];
+  if (income.length)  datasets.push({label:'Доходы',       data:income,  borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.12)',tension:.35,fill:true});
+  if (expense.length) datasets.push({label:'Расходы',      data:expense, borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.08)',tension:.35,fill:false});
+  if (inflow.length)  datasets.push({label:'Поступления',  data:inflow,  borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',tension:.35,fill:true});
+  if (outflow.length) datasets.push({label:'Списания',     data:outflow, borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',tension:.35,fill:false});
+
+  if (!datasets.length) return;
+
+  new Chart(document.getElementById('dynChart'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 12, padding: 16 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('ru-RU', {maximumFractionDigits:0})
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: v => v.toLocaleString('ru-RU', {maximumFractionDigits:0}),
+            font: { size: 11 }
+          },
+          grid: { color: '#f3f4f6' }
+        },
+        x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

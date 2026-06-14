@@ -158,7 +158,7 @@ def upload_view(request):
         entity = None
         if new_entity_name:
             entity = Entity.objects.create(name=new_entity_name)
-        elif entity_id:
+        elif entity_id and entity_id != '_new':
             entity = Entity.objects.filter(pk=entity_id).first()
 
         if not files:
@@ -167,6 +167,10 @@ def upload_view(request):
 
         if not doc_type or doc_type not in dict(Document.DOCUMENT_TYPES):
             messages.error(request, 'Выберите тип документа')
+            return redirect('finassist:upload')
+
+        if not entity:
+            messages.error(request, 'Укажите организацию — она необходима для построения отчётов и графиков')
             return redirect('finassist:upload')
 
         results = []
@@ -801,6 +805,7 @@ def entity_delete(request, pk):
 def compare_view(request):
     doc1_id = request.GET.get('doc1')
     doc2_id = request.GET.get('doc2')
+    entity_filter_id = request.GET.get('entity')
     doc1 = doc2 = analysis1 = analysis2 = None
     if doc1_id:
         doc1 = Document.objects.filter(pk=doc1_id, user=request.user, status='done').first()
@@ -809,11 +814,40 @@ def compare_view(request):
         doc2 = Document.objects.filter(pk=doc2_id, user=request.user, status='done').first()
         analysis2 = getattr(doc2, 'analysis', None) if doc2 else None
 
-    all_docs = Document.objects.filter(user=request.user, status='done').order_by('-uploaded_at')
+    all_docs_qs = Document.objects.filter(user=request.user, status='done')
+    if entity_filter_id:
+        all_docs_qs = all_docs_qs.filter(entity_id=entity_filter_id)
+    all_docs = all_docs_qs.select_related('entity').order_by('-uploaded_at')
+
+    # дельта показателей для таблицы сравнения
+    delta = {}
+    if analysis1 and analysis2 and doc1 and doc2 and doc1.doc_type == doc2.doc_type:
+        if doc1.doc_type == 'income_expense':
+            for key in ('total_income', 'total_expense', 'profit'):
+                v1 = float(getattr(analysis1, key, 0) or 0)
+                v2 = float(getattr(analysis2, key, 0) or 0)
+                delta[key] = {'abs': v2 - v1, 'pct': round((v2 - v1) / v1 * 100, 1) if v1 else None}
+        elif doc1.doc_type == 'cash_flow':
+            for key in ('total_inflow', 'total_outflow', 'net_flow'):
+                v1 = float(getattr(analysis1, key, 0) or 0)
+                v2 = float(getattr(analysis2, key, 0) or 0)
+                delta[key] = {'abs': v2 - v1, 'pct': round((v2 - v1) / v1 * 100, 1) if v1 else None}
+
+    entities = Entity.objects.order_by('name')
+    entity_filter = Entity.objects.filter(pk=entity_filter_id).first() if entity_filter_id else None
+
+    meta_pairs = []
+    if doc1 and doc2:
+        meta_pairs = [(doc1, analysis1, 1), (doc2, analysis2, 2)]
+
     return render(request, 'dashboard/compare.html', {
         'doc1': doc1, 'doc2': doc2,
         'analysis1': analysis1, 'analysis2': analysis2,
         'all_docs': all_docs,
+        'delta': delta,
+        'entities': entities,
+        'entity_filter': entity_filter,
+        'meta_pairs': meta_pairs,
     })
 
 
@@ -822,3 +856,69 @@ def entity_detail(request, pk):
     entity = get_object_or_404(Entity, pk=pk)
     docs = Document.objects.filter(entity=entity, user=request.user).order_by('-uploaded_at')
     return render(request, 'dashboard/entity_detail.html', {'entity': entity, 'docs': docs})
+
+
+@login_required
+def org_report_view(request, pk):
+    entity = get_object_or_404(Entity, pk=pk)
+    docs = Document.objects.filter(
+        entity=entity, user=request.user, status='done'
+    ).select_related('analysis').prefetch_related('metrics').order_by('uploaded_at')
+
+    # Агрегаты по типам документов
+    from decimal import Decimal
+    summary = {
+        'total_income': Decimal(0),
+        'total_expense': Decimal(0),
+        'profit': Decimal(0),
+        'total_inflow': Decimal(0),
+        'total_outflow': Decimal(0),
+        'net_flow': Decimal(0),
+        'doc_count': docs.count(),
+        'done_count': 0,
+    }
+    doc_rows = []
+    for doc in docs:
+        analysis = getattr(doc, 'analysis', None)
+        row = {'doc': doc, 'analysis': analysis}
+        if analysis:
+            summary['done_count'] += 1
+            if doc.doc_type == 'income_expense':
+                summary['total_income'] += analysis.total_income or Decimal(0)
+                summary['total_expense'] += analysis.total_expense or Decimal(0)
+                summary['profit'] += analysis.profit or Decimal(0)
+            elif doc.doc_type == 'cash_flow':
+                summary['total_inflow'] += analysis.total_inflow or Decimal(0)
+                summary['total_outflow'] += analysis.total_outflow or Decimal(0)
+                summary['net_flow'] += analysis.net_flow or Decimal(0)
+        doc_rows.append(row)
+
+    # Данные для графика динамики (только income_expense и cash_flow)
+    chart_labels = []
+    chart_income = []
+    chart_expense = []
+    chart_inflow = []
+    chart_outflow = []
+    for doc in docs:
+        analysis = getattr(doc, 'analysis', None)
+        label = doc.period or doc.uploaded_at.strftime('%d.%m.%Y')
+        if analysis:
+            if doc.doc_type == 'income_expense':
+                chart_labels.append(label)
+                chart_income.append(float(analysis.total_income or 0))
+                chart_expense.append(float(analysis.total_expense or 0))
+            elif doc.doc_type == 'cash_flow':
+                chart_labels.append(label)
+                chart_inflow.append(float(analysis.total_inflow or 0))
+                chart_outflow.append(float(analysis.total_outflow or 0))
+
+    return render(request, 'dashboard/org_report.html', {
+        'entity': entity,
+        'doc_rows': doc_rows,
+        'summary': summary,
+        'chart_labels': json.dumps(chart_labels, ensure_ascii=False),
+        'chart_income': json.dumps(chart_income),
+        'chart_expense': json.dumps(chart_expense),
+        'chart_inflow': json.dumps(chart_inflow),
+        'chart_outflow': json.dumps(chart_outflow),
+    })

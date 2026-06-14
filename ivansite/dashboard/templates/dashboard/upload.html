@@ -24,15 +24,16 @@
                     <input type="file" name="file" id="fileInput" accept=".xlsx,.xls,.csv,.xml" class="d-none" multiple required>
 
                     <div class="mb-3">
-                        <label class="form-label">Организация <span style="color:#9ca3af;font-weight:400;">(необязательно)</span></label>
-                        <select name="entity_id" id="entitySelect" class="form-select">
-                            <option value="">— Не указана —</option>
+                        <label class="form-label">Организация <span class="text-danger">*</span></label>
+                        <select name="entity_id" id="entitySelect" class="form-select" required>
+                            <option value="">— Выберите организацию —</option>
                             {% for e in entities %}
                             <option value="{{ e.pk }}">{{ e.name }}</option>
                             {% endfor %}
                             <option value="_new">+ Добавить новую организацию...</option>
                         </select>
                         <input type="text" name="new_entity_name" id="newEntityName" class="form-control mt-2" placeholder="Название новой организации" style="display:none;">
+                        <div style="font-size:.75rem;color:#6b7280;margin-top:.35rem;">Организация необходима для построения отчётов и графиков</div>
                     </div>
 
                     <div class="mb-3">
